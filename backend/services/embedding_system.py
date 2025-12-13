@@ -2,7 +2,8 @@ import logging
 import os
 import hashlib
 import json
-from typing import List, Optional
+from typing import List, Optional, Dict
+from functools import lru_cache
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import redis
@@ -11,9 +12,10 @@ import redis
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- Configuración de Redis para caché ---
+# --- Configuración de Caché ---
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-EMBEDDING_CACHE_TTL = 60 * 60 * 24 * 7  # 7 días de caché
+EMBEDDING_CACHE_TTL = 60 * 60 * 24 * 7  # 7 días de caché en Redis
+LRU_CACHE_SIZE = 500  # Número máximo de embeddings en caché LRU en memoria
 
 
 class AdvancedEmbeddingSystem:
@@ -41,16 +43,20 @@ class AdvancedEmbeddingSystem:
             self.model_name = model_name
             logger.info("Modelo de embeddings cargado exitosamente.")
             
-            # Inicializar conexión a Redis para caché
+            # Caché LRU en memoria (siempre disponible)
+            self._lru_cache: Dict[str, List[float]] = {}
+            self._lru_keys: List[str] = []  # Mantener orden de inserción para LRU
+            
+            # Inicializar conexión a Redis para caché persistente
             try:
                 self.redis_client = redis.from_url(REDIS_URL)
                 self.redis_client.ping()  # Verificar conexión
-                self.cache_enabled = True
+                self.redis_enabled = True
                 logger.info("Caché de embeddings en Redis habilitado.")
             except Exception as e:
-                logger.warning(f"Redis no disponible, caché deshabilitado: {e}")
+                logger.warning(f"Redis no disponible, usando solo caché LRU en memoria: {e}")
                 self.redis_client = None
-                self.cache_enabled = False
+                self.redis_enabled = False
                 
         except Exception as e:
             logger.error(f"Error al cargar el modelo de embeddings '{model_name}': {e}")
@@ -62,30 +68,71 @@ class AdvancedEmbeddingSystem:
         text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()[:16]
         return f"emb:{self.model_name}:{text_hash}"
 
+    def _lru_get(self, key: str) -> Optional[List[float]]:
+        """Obtener embedding de caché LRU en memoria."""
+        if key in self._lru_cache:
+            # Mover a final de lista (más recientemente usado)
+            if key in self._lru_keys:
+                self._lru_keys.remove(key)
+            self._lru_keys.append(key)
+            return self._lru_cache[key]
+        return None
+
+    def _lru_set(self, key: str, embedding: List[float]) -> None:
+        """Guardar embedding en caché LRU en memoria."""
+        if key not in self._lru_cache:
+            # Evictar si llegamos al límite
+            if len(self._lru_keys) >= LRU_CACHE_SIZE:
+                oldest_key = self._lru_keys.pop(0)
+                del self._lru_cache[oldest_key]
+            self._lru_keys.append(key)
+        self._lru_cache[key] = embedding
+
     def _get_cached_embedding(self, text: str) -> Optional[List[float]]:
-        """Intenta recuperar un embedding cacheado de Redis."""
-        if not self.cache_enabled:
-            return None
-        try:
-            cached = self.redis_client.get(self._get_cache_key(text))
-            if cached:
-                return json.loads(cached)
-        except Exception as e:
-            logger.debug(f"Error al leer caché: {e}")
+        """
+        Intenta recuperar un embedding cacheado.
+        Orden de búsqueda: LRU en memoria -> Redis.
+        """
+        cache_key = self._get_cache_key(text)
+        
+        # 1. Buscar en caché LRU (más rápido)
+        cached = self._lru_get(cache_key)
+        if cached is not None:
+            return cached
+        
+        # 2. Buscar en Redis si está disponible
+        if self.redis_enabled:
+            try:
+                redis_cached = self.redis_client.get(cache_key)
+                if redis_cached:
+                    embedding = json.loads(redis_cached)
+                    # Promover a LRU para acceso más rápido
+                    self._lru_set(cache_key, embedding)
+                    return embedding
+            except Exception as e:
+                logger.debug(f"Error al leer caché Redis: {e}")
+        
         return None
 
     def _cache_embedding(self, text: str, embedding: List[float]) -> None:
-        """Guarda un embedding en el caché de Redis."""
-        if not self.cache_enabled:
-            return
-        try:
-            self.redis_client.setex(
-                self._get_cache_key(text),
-                EMBEDDING_CACHE_TTL,
-                json.dumps(embedding)
-            )
-        except Exception as e:
-            logger.debug(f"Error al escribir en caché: {e}")
+        """
+        Guarda un embedding en ambas capas de caché.
+        """
+        cache_key = self._get_cache_key(text)
+        
+        # 1. Guardar en LRU (siempre disponible)
+        self._lru_set(cache_key, embedding)
+        
+        # 2. Guardar en Redis si está disponible
+        if self.redis_enabled:
+            try:
+                self.redis_client.setex(
+                    cache_key,
+                    EMBEDDING_CACHE_TTL,
+                    json.dumps(embedding)
+                )
+            except Exception as e:
+                logger.debug(f"Error al escribir en caché Redis: {e}")
 
     def create_embeddings(self, texts: List[str]) -> List[List[float]]:
         """

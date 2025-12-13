@@ -17,6 +17,7 @@ from .connection_manager import manager
 from .exception_handlers import register_exception_handlers
 from .rate_limiter import get_rate_limiter
 from .security_middleware import SecurityHeadersMiddleware
+from .metrics import get_metrics_response
 from logging_config import setup_logging, get_logger
 
 # --- Configuración de Logging Estructurado ---
@@ -123,6 +124,10 @@ TAGS_METADATA = [
         "name": "Proveedores IA",
         "description": "Listado de proveedores de IA disponibles y sus modelos.",
     },
+    {
+        "name": "Operaciones",
+        "description": "Endpoints de operaciones y monitoreo del sistema.",
+    },
 ]
 
 # --- Creación de la App FastAPI ---
@@ -222,3 +227,27 @@ app.include_router(documents.router)
 app.include_router(chat.router)
 app.include_router(admin.router)
 app.include_router(providers.router)
+
+
+# --- Metrics Endpoint ---
+@app.get(
+    "/metrics",
+    tags=["Operaciones"],
+    summary="Métricas Prometheus",
+    description="Expone métricas del sistema en formato Prometheus para monitoreo y alertas.",
+    include_in_schema=True,
+)
+async def metrics():
+    """Endpoint para exponer métricas Prometheus."""
+    return get_metrics_response()
+
+
+@app.get(
+    "/health",
+    tags=["Operaciones"],
+    summary="Health Check",
+    description="Verifica que el servicio está funcionando correctamente.",
+)
+async def health_check():
+    """Simple health check endpoint."""
+    return {"status": "healthy", "version": "4.1.1"}

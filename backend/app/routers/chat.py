@@ -64,8 +64,15 @@ async def _create_not_found_stream(source_files: Optional[List[str]] = None):
 
 # --- Endpoints ---
 
-# Endpoint principal de busqueda semantica
-@router.post("/search")
+@router.post(
+    "/search",
+    summary="Búsqueda semántica con IA",
+    description="Realiza búsqueda híbrida (semántica + palabras clave) en documentos del usuario y genera respuesta con IA.",
+    responses={
+        200: {"description": "Respuesta streaming con respuesta generada por IA"},
+        500: {"description": "Error interno durante la búsqueda"}
+    }
+)
 async def search_endpoint(
     request: schemas.SearchQuery,
     db: Session = Depends(get_db),
@@ -155,8 +162,16 @@ async def search_endpoint(
         logger.error(f"Error crítico en el endpoint de búsqueda para la consulta '{request.query}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Ocurrió un error interno del servidor durante la búsqueda.")
 
-# Copilot endpoint for LaTeX assistance
-@router.post("/copilot", tags=["Copilot"])
+@router.post(
+    "/copilot", 
+    tags=["Copilot"],
+    summary="Asistente de LaTeX con IA",
+    description="Genera o modifica contenido LaTeX basado en instrucciones del usuario y contexto de documentos.",
+    responses={
+        200: {"description": "Respuesta streaming con LaTeX generado"},
+        500: {"description": "Error en el copiloto"}
+    }
+)
 async def copilot_endpoint(
     request: schemas.CopilotRequest,
     db: Session = Depends(get_db),
@@ -260,7 +275,17 @@ def _parse_latex_error(error_log: str) -> str:
         return ErrorMessages.PDF_COMPILE_ERROR
 
 
-@router.post("/compile-pdf", tags=["Copilot"])
+@router.post(
+    "/compile-pdf", 
+    tags=["Copilot"],
+    summary="Compilar LaTeX a PDF",
+    description="Compila código LaTeX y retorna el PDF generado. Requiere pdflatex instalado en el servidor.",
+    responses={
+        200: {"description": "PDF generado exitosamente", "content": {"application/pdf": {}}},
+        400: {"description": "Error de compilación LaTeX"},
+        500: {"description": "Error al generar PDF"}
+    }
+)
 async def compile_pdf_endpoint(request: schemas.CopilotRequest) -> Response:
     """
     Compile LaTeX code to PDF.
@@ -311,7 +336,14 @@ async def compile_pdf_endpoint(request: schemas.CopilotRequest) -> Response:
             )
 
 
-@router.post("/feedback")
+@router.post(
+    "/feedback",
+    summary="Enviar feedback",
+    description="Almacena feedback del usuario sobre una respuesta del chatbot para mejorar el sistema.",
+    responses={
+        200: {"description": "Feedback recibido exitosamente"}
+    }
+)
 async def post_feedback(
     feedback: schemas.FeedbackRequest,
     db: Session = Depends(get_db)

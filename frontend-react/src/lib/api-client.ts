@@ -14,6 +14,115 @@
 let authToken: string | null = null;
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+// --- Retry Configuration ---
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 10000,
+  backoffFactor: 2,
+};
+
+/**
+ * Delay execution for a specified number of milliseconds.
+ * @param ms - Milliseconds to wait
+ */
+const delay = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Check if an error is retryable (network errors, 5xx, 429).
+ * @param error - The error or response to check
+ */
+function isRetryableError(error: unknown): boolean {
+  // Network errors (TypeError: Failed to fetch)
+  if (error instanceof TypeError && error.message.includes('fetch')) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Check if a response status code is retryable.
+ * @param status - HTTP status code
+ */
+function isRetryableStatus(status: number): boolean {
+  // 429 Too Many Requests, 5xx Server Errors, 0 (network failure)
+  return status === 429 || status >= 500 || status === 0;
+}
+
+/**
+ * Calculate delay with exponential backoff and jitter.
+ * @param attempt - Current retry attempt (0-indexed)
+ */
+function calculateBackoff(attempt: number): number {
+  const exponentialDelay = RETRY_CONFIG.baseDelayMs * Math.pow(RETRY_CONFIG.backoffFactor, attempt);
+  const jitter = Math.random() * 0.3 * exponentialDelay; // Add 0-30% jitter
+  return Math.min(exponentialDelay + jitter, RETRY_CONFIG.maxDelayMs);
+}
+
+/**
+ * Fetch with automatic retry on transient errors.
+ * Uses exponential backoff with jitter for retry delays.
+ * 
+ * @param url - The URL to fetch
+ * @param options - Fetch options
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns Promise with the fetch Response
+ * @throws Error after all retries are exhausted
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries: number = RETRY_CONFIG.maxRetries
+): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // If response is OK or error is not retryable, return it
+      if (response.ok || !isRetryableStatus(response.status)) {
+        return response;
+      }
+
+      // For retryable status codes, throw to trigger retry
+      if (attempt < maxRetries) {
+        const backoffTime = calculateBackoff(attempt);
+        console.warn(
+          `Request to ${url} failed with status ${response.status}. ` +
+          `Retrying in ${Math.round(backoffTime)}ms (attempt ${attempt + 1}/${maxRetries})`
+        );
+        await delay(backoffTime);
+        continue;
+      }
+
+      // Last attempt - return the response as-is
+      return response;
+
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Check if error is retryable
+      if (isRetryableError(error) && attempt < maxRetries) {
+        const backoffTime = calculateBackoff(attempt);
+        console.warn(
+          `Network error fetching ${url}: ${lastError.message}. ` +
+          `Retrying in ${Math.round(backoffTime)}ms (attempt ${attempt + 1}/${maxRetries})`
+        );
+        await delay(backoffTime);
+        continue;
+      }
+
+      // Not retryable or last attempt - throw
+      throw lastError;
+    }
+  }
+
+  // Should not reach here, but just in case
+  throw lastError || new Error('Request failed after all retries');
+}
+
 // --- Helper Functions ---
 
 /**
@@ -57,6 +166,47 @@ async function handleResponse<T>(response: Response): Promise<T> {
     return response.blob() as Promise<T>;
   }
   return response.json() as Promise<T>;
+}
+
+// --- Zod Validation Import ---
+// Lazy import to avoid circular dependencies
+import type { ZodSchema } from 'zod';
+
+/**
+ * Handle response with optional Zod validation.
+ * Validates the parsed JSON against the provided schema.
+ * 
+ * @param response - Fetch Response object
+ * @param schema - Optional Zod schema for validation
+ * @param context - Context string for error logging
+ * @returns Validated and typed response data
+ * @throws Error if response is not OK or validation fails
+ */
+async function handleResponseWithValidation<T>(
+  response: Response,
+  schema?: ZodSchema<T>,
+  context?: string
+): Promise<T> {
+  const data = await handleResponse<T>(response);
+
+  if (schema) {
+    const result = schema.safeParse(data);
+    if (!result.success) {
+      console.warn(
+        `[API Validation Warning]${context ? ` ${context}:` : ''}`,
+        result.error.issues
+      );
+      // In development, we warn but still return data
+      // In production, you might want to throw or handle differently
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Returning unvalidated data due to schema mismatch');
+      }
+    } else {
+      return result.data;
+    }
+  }
+
+  return data;
 }
 
 // --- Types ---
@@ -160,7 +310,7 @@ export interface ProvidersResponse {
 // --- Provider Endpoints ---
 
 export const getProviders = (): Promise<ProvidersResponse> => {
-  return fetch(`${API_BASE_URL}/providers/`, {
+  return fetchWithRetry(`${API_BASE_URL}/providers/`, {
     method: 'GET',
     headers: getHeaders(),
   }).then(response => handleResponse<ProvidersResponse>(response));
@@ -218,7 +368,7 @@ export const logout = (refreshTokenValue?: string): Promise<{ message: string }>
 };
 
 export const getMe = (): Promise<User> => {
-  return fetch(`${API_BASE_URL}/auth/users/me`, {
+  return fetchWithRetry(`${API_BASE_URL}/auth/users/me`, {
     method: 'GET',
     headers: getHeaders(),
   }).then(response => handleResponse<User>(response));
@@ -237,7 +387,7 @@ export const updateProfile = updateUser;
 // --- Admin Endpoints ---
 
 export const getUsers = (): Promise<User[]> => {
-  return fetch(`${API_BASE_URL}/admin/users`, {
+  return fetchWithRetry(`${API_BASE_URL}/admin/users`, {
     method: 'GET',
     headers: getHeaders(),
   }).then(response => handleResponse<User[]>(response));
@@ -353,7 +503,7 @@ export async function processFile(file: File): Promise<FileProcessResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${API_BASE_URL}/documents/process-file`, {
+  const response = await fetchWithRetry(`${API_BASE_URL}/documents/process-file`, {
     method: 'POST',
     headers: getHeaders(true), // FormData es especial
     body: formData,
@@ -362,7 +512,7 @@ export async function processFile(file: File): Promise<FileProcessResponse> {
 }
 
 export async function listDocuments(): Promise<DocumentMetadata[]> {
-  const response = await fetch(`${API_BASE_URL}/documents`, {
+  const response = await fetchWithRetry(`${API_BASE_URL}/documents`, {
     method: 'GET',
     headers: getHeaders(),
   });

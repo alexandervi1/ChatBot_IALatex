@@ -44,7 +44,17 @@ class LogoutRequest(BaseModel):
 
 # Endpoint para registrar nuevos usuarios
 # Verifica si el email ya existe antes de crear el usuario
-@router.post("/register", response_model=schemas.UserPublic, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", 
+    response_model=schemas.UserPublic, 
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar nuevo usuario",
+    description="Crea una nueva cuenta de usuario. El email debe ser único en el sistema.",
+    responses={
+        201: {"description": "Usuario creado exitosamente"},
+        400: {"description": "Email ya registrado"}
+    }
+)
 async def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
@@ -68,8 +78,16 @@ async def register_user(user: schemas.UserCreate, db: Session = Depends(get_db))
     return db_user
 
 
-# Endpoint para iniciar sesion y obtener tokens (access + refresh)
-@router.post("/login", response_model=TokenWithRefresh)
+@router.post(
+    "/login", 
+    response_model=TokenWithRefresh,
+    summary="Iniciar sesión",
+    description="Autentica con email y contraseña. Retorna access token (30 min) y refresh token (7 días).",
+    responses={
+        200: {"description": "Login exitoso con tokens"},
+        401: {"description": "Credenciales inválidas"}
+    }
+)
 async def login_for_access_token(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(), 
@@ -123,7 +141,16 @@ async def login_for_access_token(
     )
 
 
-@router.post("/refresh", response_model=TokenWithRefresh)
+@router.post(
+    "/refresh", 
+    response_model=TokenWithRefresh,
+    summary="Refrescar tokens",
+    description="Intercambia un refresh token válido por nuevos tokens. El token anterior se invalida (rotación).",
+    responses={
+        200: {"description": "Nuevos tokens generados"},
+        401: {"description": "Refresh token inválido o expirado"}
+    }
+)
 async def refresh_tokens(
     request: Request,
     refresh_request: RefreshRequest,
@@ -163,7 +190,14 @@ async def refresh_tokens(
     )
 
 
-@router.post("/logout")
+@router.post(
+    "/logout",
+    summary="Cerrar sesión",
+    description="Invalida tokens. Si se proporciona refresh_token, solo revoca esa familia. De lo contrario, cierra todas las sesiones.",
+    responses={
+        200: {"description": "Sesión cerrada exitosamente"}
+    }
+)
 async def logout(
     logout_request: LogoutRequest,
     db: Session = Depends(get_db),
@@ -189,12 +223,22 @@ async def logout(
     return {"message": "Sesión cerrada exitosamente"}
 
 
-@router.get("/users/me", response_model=schemas.UserPublic)
+@router.get(
+    "/users/me", 
+    response_model=schemas.UserPublic,
+    summary="Obtener perfil actual",
+    description="Retorna la información del usuario autenticado."
+)
 async def read_users_me(current_user: models.User = Depends(auth_service.get_current_active_user)):
     return current_user
 
 
-@router.put("/users/me", response_model=schemas.UserPublic)
+@router.put(
+    "/users/me", 
+    response_model=schemas.UserPublic,
+    summary="Actualizar perfil",
+    description="Actualiza información del usuario: API key, proveedor de IA, modelo preferido, o nombre."
+)
 async def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(auth_service.get_current_active_user)):
     if user_update.gemini_api_key is not None:
         # Encrypt API key before storing in database
