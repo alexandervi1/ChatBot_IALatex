@@ -65,10 +65,39 @@ Este es un **chatbot inteligente** diseñado para consultar documentos académic
 
 ### Paso 1: Clonar el Repositorio
 
+#### Opción A: Usando Terminal (Git)
+
 ```bash
 git clone https://github.com/tu-usuario/chatbot-ia-latex.git
 cd chatbot-ia-latex
 ```
+
+#### Opción B: Usando GitHub Desktop (Más Fácil)
+
+Si prefieres una interfaz gráfica:
+
+1. **Descarga GitHub Desktop** (si no lo tienes):
+   - Ve a [desktop.github.com](https://desktop.github.com/)
+   - Descarga e instala la aplicación
+
+2. **Clonar el repositorio**:
+   - Abre GitHub Desktop
+   - Ve a **File → Clone Repository** (o presiona `Ctrl+Shift+O`)
+   - Selecciona la pestaña **URL**
+   - Pega esta URL:
+     ```
+     https://github.com/tu-usuario/chatbot-ia-latex.git
+     ```
+   - Elige la carpeta donde quieres guardarlo (ej: `C:\Proyectos\`)
+   - Haz clic en **Clone**
+
+3. **Abrir en terminal**:
+   - Una vez clonado, haz clic derecho en el repositorio
+   - Selecciona **Open in Command Prompt** o **Open in PowerShell**
+   - Ya estás listo para continuar con el Paso 2
+
+> 💡 **Tip**: GitHub Desktop también te permite ver cambios, hacer commits y sincronizar sin usar comandos.
+
 
 ### Paso 2: Configurar Variables de Entorno
 
