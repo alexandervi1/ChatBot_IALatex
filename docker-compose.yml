@@ -163,12 +163,6 @@ services:
       resources:
         limits:
           memory: 8G
-        # NVIDIA GPU Reservation
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 
         # Volúmenes para persistencia de datos
 volumes:
