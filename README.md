@@ -1,4 +1,4 @@
-# 🤖 Chatbot IA Premium V4.1.1
+# Chatbot IA con Copiloto de Latex
 
 Sistema avanzado de chatbot con IA que combina **búsqueda semántica RAG**, **generación de respuestas con múltiples proveedores de IA**, y un **editor LaTeX inteligente** con copiloto. Optimizado para eficiencia con formato **TOON** que reduce el uso de tokens en un 30-60%.
 
@@ -12,7 +12,7 @@ Sistema avanzado de chatbot con IA que combina **búsqueda semántica RAG**, **g
 
 ---
 
-## 🐳 Inicio Rápido con Docker (Recomendado)
+## Inicio Rápido con Docker (Recomendado)
 
 ¡Levanta todo el sistema (Frontend, Backend, Base de Datos, Redis, Workers, Ollama) en minutos!
 
@@ -44,8 +44,8 @@ Sistema avanzado de chatbot con IA que combina **búsqueda semántica RAG**, **g
     ```
 
 5.  **Acceder a la Aplicación**
-    - 🖥️ **Frontend**: [http://localhost:3000](http://localhost:3000)
-    - ⚙️ **Backend API**: [http://localhost:8000/docs](http://localhost:8000/docs)
+    -  **Frontend**: [http://localhost:3000](http://localhost:3000)
+    -  **Backend API**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 6.  **(Opcional) Descargar modelos locales para uso sin API**
     ```bash
@@ -54,23 +54,23 @@ Sistema avanzado de chatbot con IA que combina **búsqueda semántica RAG**, **g
 
 ---
 
-## 🆕 Novedades v4.1
+##  Novedades v4.1
 
-### 🔐 Seguridad Mejorada
+###  Seguridad Mejorada
 - **Encriptación de API Keys**: Las claves se almacenan encriptadas con Fernet (AES-128-CBC + PBKDF2)
 - **Refresh Tokens con Rotación**: Access tokens de 30 min + refresh tokens de 7 días
 - **Detección de Reutilización**: Si un refresh token se usa más de una vez, se revocan todas las sesiones
 - **Auditoría Completa**: Registro de acciones sensibles (login, cambios de rol, eliminaciones)
 - **Rate Limiting Inteligente**: Límites diferenciados por usuario (anónimo/autenticado/admin)
 
-### 🛠️ Infraestructura
+###  Infraestructura
 - **Alembic**: Migraciones de base de datos versionadas
 - **Logging Estructurado**: JSON en producción, coloreado en desarrollo
 - **OpenAPI Mejorada**: Documentación completa con tags y ejemplos
 - **Connection Pooling**: Pool de conexiones optimizado con pre-ping
 - **Error Handling Centralizado**: Respuestas de error consistentes
 
-### ⚡ Frontend Optimizado
+###  Frontend Optimizado
 - **Componentes Modulares**: chat-layout y copilot-editor divididos en componentes reutilizables
 - **Custom Hooks**: Lógica extraída a hooks como `useChatState`
 - **Auto-Refresh de Tokens**: Renovación automática antes de expirar
@@ -78,7 +78,7 @@ Sistema avanzado de chatbot con IA que combina **búsqueda semántica RAG**, **g
 
 ---
 
-## 🤖 Proveedores de IA Soportados
+##  Proveedores de IA Soportados
 
 | Proveedor | Modelos | ¿Necesita API Key? |
 |-----------|---------|-------------------|
@@ -87,50 +87,50 @@ Sistema avanzado de chatbot con IA que combina **búsqueda semántica RAG**, **g
 | **Anthropic Claude** | claude-3-5-sonnet, claude-3-haiku | ✅ [Obtener Key](https://console.anthropic.com/settings/keys) |
 | **Local (Ollama)** | llama3.2:3b, llama3.1:8b, mistral:7b | ❌ Gratis - Corre localmente |
 
-### 🏠 Modelo Local (Sin API Key)
+###  Modelo Local (Sin API Key)
 
 El modo local usa **Ollama** para ejecutar modelos de IA directamente en tu servidor:
 
-- 🆓 **Gratis**: Sin costos de API
-- 🔒 **Privado**: Los datos nunca salen de tu servidor
-- ♾️ **Sin límites**: Sin restricciones de tokens
+-  **Gratis**: Sin costos de API
+-  **Privado**: Los datos nunca salen de tu servidor
+-  **Sin límites**: Sin restricciones de tokens
 
 **Requisitos:** RAM 8GB+ | CPU 4+ cores | GPU opcional (8GB+ VRAM)
 
 ---
 
-## ✨ Características Principales
+##  Características Principales
 
-### 🔍 Sistema RAG Avanzado
+###  Sistema RAG Avanzado
 - **Búsqueda Híbrida**: Semántica (embeddings) + Palabras clave (PostgreSQL FTS)
 - **Re-ranking Inteligente**: CrossEncoder para mejorar relevancia
 - **Embeddings**: Modelo `all-MiniLM-L6-v2` optimizado
 - **Filtrado por Fuentes**: Búsqueda en documentos seleccionados
 
-### 💬 Chat Inteligente & Multi-Proveedor
+###  Chat Inteligente & Multi-Proveedor
 - **4 Proveedores de IA**: Gemini, OpenAI, Anthropic o Local
 - **Preguntas Sugeridas**: Generación automática al cargar documentos
 - **Formato TOON**: Reduce consumo de tokens en **30-60%**
 - **Búsqueda de Imágenes**: Incluye imágenes de internet en respuestas
 
-### 📝 Editor LaTeX con Copiloto (IDE Premium)
+###  Editor LaTeX con Copiloto (IDE Premium)
 - **Monaco Editor**: El mismo motor que VS Code
 - **Acciones Contextuales IA**: Clic derecho para mejorar, traducir o corregir
 - **9 Plantillas Profesionales**: Artículos, tesis, CV, cartas, informes
 - **Compilación en Tiempo Real**: Vista previa PDF instantánea
 
-### 👤 Gestión de Usuarios
+###  Gestión de Usuarios
 - **JWT + Refresh Tokens**: Autenticación segura con rotación
 - **Panel de Administración**: Gestión de roles, usuarios, documentos
 - **API Keys Encriptadas**: Almacenamiento seguro con Fernet
 - **Auditoría**: Log de todas las acciones sensibles
 
-### 🎨 Sistema de Temas Premium
+###  Sistema de Temas Premium
 - **6 Temas**: Oscuro, Claro, Rojo Pasión, Alto Contraste, Matrix, Vintage
 
 ---
 
-## 🏗️ Arquitectura
+##  Arquitectura
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -191,7 +191,7 @@ frontend-react/
 
 ---
 
-## 🔧 Variables de Entorno
+##  Variables de Entorno
 
 | Variable | Descripción | Requerida |
 |----------|-------------|-----------|
@@ -209,7 +209,7 @@ frontend-react/
 
 ---
 
-## 🚀 Instalación Manual (Desarrollo)
+##  Instalación Manual (Desarrollo)
 
 ### Requisitos
 - Python 3.11+
@@ -241,7 +241,7 @@ npm run dev
 
 ---
 
-## 📖 Uso
+## Uso
 
 ### 1. Configurar Proveedor de IA
 1. Registra una cuenta o inicia sesión
@@ -264,7 +264,7 @@ npm run dev
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 cd backend
@@ -285,7 +285,7 @@ Tests incluidos (**60+ tests**):
 
 ---
 
-## 🔐 Seguridad
+## Seguridad
 
 ### Tokens
 - **Access Token**: 30 minutos de duración
@@ -305,7 +305,7 @@ Todas estas acciones quedan registradas:
 
 ---
 
-## 🛠️ Comandos Útiles
+## Comandos Útiles
 
 ```bash
 # Ver logs del backend
@@ -323,7 +323,7 @@ docker-compose exec backend python -c "from services.auth_service import cleanup
 
 ---
 
-## 🤝 Contribuciones
+## Contribuciones
 
 ¡Las contribuciones son bienvenidas!
 1. Fork el repositorio
