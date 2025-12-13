@@ -101,56 +101,30 @@ Si prefieres una interfaz gráfica:
 
 ### Paso 2: Configurar Variables de Entorno
 
-Crea un archivo llamado `.env` en la raíz del proyecto:
+El proyecto incluye un archivo `.env.example` listo para usar. Solo necesitas copiarlo y generar las claves de seguridad:
 
 ```bash
 # Windows (PowerShell)
-New-Item -ItemType File -Name ".env"
+copy .env.example .env
 
 # Linux/Mac
-touch .env
+cp .env.example .env
 ```
 
-Copia y pega este contenido en el archivo `.env`:
+**Genera las claves de seguridad** (ejecuta este comando **2 veces**, una para cada clave):
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+**Edita el archivo `.env`** y reemplaza estas dos líneas con las claves que generaste:
 
 ```env
-# ============================================
-# CONFIGURACIÓN DE BASE DE DATOS
-# ============================================
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=MiPasswordSeguro123!
-POSTGRES_DB=chatbot_db
-
-# ============================================
-# SEGURIDAD (¡IMPORTANTE! Genera claves únicas)
-# ============================================
-# Para generar una clave segura, ejecuta:
-# python -c "import secrets; print(secrets.token_hex(32))"
-
-JWT_SECRET_KEY=CAMBIA_ESTO_genera_una_clave_de_64_caracteres_xxxxxxxxx
-ENCRYPTION_KEY=CAMBIA_ESTO_otra_clave_diferente_de_64_caracteres_xxxxx
-
-# ============================================
-# CORS (Orígenes permitidos)
-# ============================================
-CORS_ORIGINS=http://localhost:3000
-
-# ============================================
-# PROVEEDOR DE IA POR DEFECTO (Opcional)
-# ============================================
-# Si quieres usar un proveedor en la nube por defecto:
-# GEMINI_API_KEY=tu_api_key_de_gemini
-
-# ============================================
-# PRODUCCIÓN (Opcional)
-# ============================================
-# ENVIRONMENT=production
+JWT_SECRET_KEY=PEGA_AQUI_LA_PRIMERA_CLAVE_GENERADA
+ENCRYPTION_KEY=PEGA_AQUI_LA_SEGUNDA_CLAVE_GENERADA
 ```
 
-> ⚠️ **Importante**: Genera claves seguras únicas para `JWT_SECRET_KEY` y `ENCRYPTION_KEY`. Ejecuta este comando para generar cada una:
-> ```bash
-> python -c "import secrets; print(secrets.token_hex(32))"
-> ```
+> ✅ **¡Eso es todo!** Las demás variables ya tienen valores predeterminados que funcionan.
 
 ### Paso 3: Levantar los Servicios
 
