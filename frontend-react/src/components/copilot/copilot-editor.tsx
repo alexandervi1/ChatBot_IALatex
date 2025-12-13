@@ -269,7 +269,7 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
       }]);
     });
 
-    editor.onDidScrollChange((e) => {
+    editor.onDidScrollChange((e: { scrollTop: number; scrollHeight: number }) => {
       if (!pdfPreviewRef.current || isSyncing.current) return;
 
       const scrollPercentage = e.scrollTop / (e.scrollHeight - editor.getLayoutInfo().height);
