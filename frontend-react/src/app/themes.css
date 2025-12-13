@@ -1,0 +1,149 @@
+/* Theme: Red Passion - Dramatic & Bold */
+.red {
+  --background: oklch(0.15 0.02 20);
+  --foreground: oklch(0.95 0.02 20);
+  --card: oklch(0.2 0.03 20);
+  --card-foreground: oklch(0.95 0.02 20);
+  --popover: oklch(0.18 0.025 20);
+  --popover-foreground: oklch(0.95 0.02 20);
+  --primary: oklch(0.6 0.26 27);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.25 0.05 27);
+  --secondary-foreground: oklch(0.95 0.02 20);
+  --muted: oklch(0.25 0.03 20);
+  --muted-foreground: oklch(0.65 0.02 20);
+  --accent: oklch(0.35 0.15 27);
+  --accent-foreground: oklch(0.95 0.02 20);
+  --destructive: oklch(0.65 0.28 27);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.3 0.05 27);
+  --input: oklch(0.25 0.03 20);
+  --ring: oklch(0.6 0.26 27);
+  --radius: 0.75rem;
+}
+
+/* Theme: High Contrast - Sharp & Accessible */
+.high-contrast {
+  --background: oklch(0 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.08 0 0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.08 0 0);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(0.85 0.05 100);
+  --primary-foreground: oklch(0 0 0);
+  --secondary: oklch(0.15 0 0);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.2 0 0);
+  --muted-foreground: oklch(0.75 0 0);
+  --accent: oklch(0.25 0 0);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.65 0.28 27);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.4 0 0);
+  --input: oklch(0.15 0 0);
+  --ring: oklch(0.85 0.05 100);
+  --radius: 0.25rem;
+}
+
+/* Theme: Matrix - Cyber Green */
+.matrix {
+  --background: oklch(0.08 0.05 145);
+  --foreground: oklch(0.88 0.18 145);
+  --card: oklch(0.12 0.08 145);
+  --card-foreground: oklch(0.88 0.18 145);
+  --popover: oklch(0.12 0.08 145);
+  --popover-foreground: oklch(0.88 0.18 145);
+  --primary: oklch(0.65 0.25 145);
+  --primary-foreground: oklch(0.08 0.05 145);
+  --secondary: oklch(0.2 0.1 145);
+  --secondary-foreground: oklch(0.88 0.18 145);
+  --muted: oklch(0.18 0.08 145);
+  --muted-foreground: oklch(0.55 0.15 145);
+  --accent: oklch(0.35 0.18 145);
+  --accent-foreground: oklch(0.95 0.2 145);
+  --destructive: oklch(0.6 0.22 27);
+  --destructive-foreground: oklch(0.95 0.2 145);
+  --border: oklch(0.25 0.12 145);
+  --input: oklch(0.15 0.08 145);
+  --ring: oklch(0.65 0.25 145);
+  --radius: 0.5rem;
+}
+
+/* Theme: Vintage - Retro Sepia */
+.vintage {
+  --background: oklch(0.25 0.03 60);
+  --foreground: oklch(0.9 0.04 60);
+  --card: oklch(0.3 0.04 60);
+  --card-foreground: oklch(0.9 0.04 60);
+  --popover: oklch(0.28 0.035 60);
+  --popover-foreground: oklch(0.9 0.04 60);
+  --primary: oklch(0.62 0.14 50);
+  --primary-foreground: oklch(0.15 0.02 60);
+  --secondary: oklch(0.35 0.05 60);
+  --secondary-foreground: oklch(0.9 0.04 60);
+  --muted: oklch(0.35 0.04 60);
+  --muted-foreground: oklch(0.65 0.06 60);
+  --accent: oklch(0.5 0.1 70);
+  --accent-foreground: oklch(0.95 0.04 60);
+  --destructive: oklch(0.55 0.18 40);
+  --destructive-foreground: oklch(0.95 0.04 60);
+  --border: oklch(0.4 0.05 60);
+  --input: oklch(0.32 0.04 60);
+  --ring: oklch(0.62 0.14 50);
+  --radius: 0.75rem;
+}
+
+/* Theme: Academic - Harvard Institutional Style */
+.academic {
+  --background: oklch(0.12 0.02 240);
+  --foreground: oklch(0.95 0.01 240);
+  --card: oklch(0.16 0.025 240);
+  --card-foreground: oklch(0.95 0.01 240);
+  --popover: oklch(0.14 0.02 240);
+  --popover-foreground: oklch(0.95 0.01 240);
+  /* Harvard Crimson inspired primary with blue academic tone */
+  --primary: oklch(0.55 0.18 250);
+  --primary-foreground: oklch(0.98 0.01 240);
+  --secondary: oklch(0.22 0.03 240);
+  --secondary-foreground: oklch(0.95 0.01 240);
+  --muted: oklch(0.22 0.025 240);
+  --muted-foreground: oklch(0.7 0.02 240);
+  /* Gold accent for prestige */
+  --accent: oklch(0.72 0.16 85);
+  --accent-foreground: oklch(0.15 0.02 240);
+  --destructive: oklch(0.55 0.22 27);
+  --destructive-foreground: oklch(0.98 0.01 240);
+  --border: oklch(0.28 0.03 240);
+  --input: oklch(0.2 0.025 240);
+  --ring: oklch(0.55 0.18 250);
+  --radius: 0.5rem;
+  
+  /* Academic-specific variables */
+  --academic-gold: oklch(0.72 0.16 85);
+  --academic-blue: oklch(0.55 0.18 250);
+  --academic-navy: oklch(0.25 0.06 250);
+}
+
+/* Add subtle glow effects for themed buttons */
+.red .btn-primary,
+.matrix .btn-primary,
+.high-contrast .btn-primary {
+  box-shadow: 0 0 12px -2px hsl(var(--primary) / 0.4);
+}
+
+/* Academic theme special effects */
+.academic .btn-primary,
+.academic button[data-variant="default"] {
+  box-shadow: 0 0 20px -4px oklch(0.55 0.18 250 / 0.5);
+  border: 1px solid oklch(0.72 0.16 85 / 0.3);
+}
+
+.academic .card {
+  border: 1px solid oklch(0.72 0.16 85 / 0.15);
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}

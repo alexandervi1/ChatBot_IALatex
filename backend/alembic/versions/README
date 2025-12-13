@@ -1,0 +1,9 @@
+# This folder contains Alembic database migration scripts.
+# 
+# Usage:
+#   alembic upgrade head     - Apply all migrations
+#   alembic downgrade -1     - Rollback last migration
+#   alembic revision -m "description"  - Create new migration manually
+#   alembic revision --autogenerate -m "description"  - Auto-generate migration from model changes
+#
+# Make sure DATABASE_URL environment variable is set before running.

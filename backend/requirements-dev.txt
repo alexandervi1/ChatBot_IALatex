@@ -1,0 +1,4 @@
+# Development and testing dependencies
+pytest
+pytest-mock
+pytest-env
