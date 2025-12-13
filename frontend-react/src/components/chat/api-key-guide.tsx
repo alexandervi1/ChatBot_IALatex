@@ -67,7 +67,9 @@ export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
     const currentProvider = providers.find(p => p.id === selectedProvider) || providers[0];
 
     const handleSubmit = async () => {
-        if (!apiKey.trim()) return;
+        // Allow empty API key for local provider
+        const isLocalProvider = selectedProvider === 'local';
+        if (!isLocalProvider && !apiKey.trim()) return;
 
         setIsSubmitting(true);
         try {
@@ -243,7 +245,7 @@ export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
                     )}
                     <Button
                         onClick={handleSubmit}
-                        disabled={!apiKey.trim() || isSubmitting}
+                        disabled={(selectedProvider !== 'local' && !apiKey.trim()) || isSubmitting}
                     >
                         {isSubmitting ? "Guardando..." : "Guardar y Continuar"}
                     </Button>

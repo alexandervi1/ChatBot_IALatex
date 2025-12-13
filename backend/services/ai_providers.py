@@ -474,6 +474,102 @@ class LocalProvider(AIProvider):
                 yield "Ocurrió un error de conexión con el modelo local. Verifica que Ollama esté corriendo."
 
 
+class CerebrasProvider(AIProvider):
+    """Cerebras Inference API - Ultra-fast LLM inference."""
+    
+    @property
+    def name(self) -> str:
+        return "Cerebras"
+    
+    @property
+    def provider_id(self) -> str:
+        return "cerebras"
+    
+    @property
+    def default_model(self) -> str:
+        return "llama-4-scout-17b-16e-instruct"
+    
+    @property
+    def models(self) -> List[Dict[str, str]]:
+        return [
+            {"id": "llama-4-scout-17b-16e-instruct", "name": "Llama 4 Scout (17B) - Ultra Rápido"},
+            {"id": "llama3.1-8b", "name": "Llama 3.1 (8B) - Económico"},
+            {"id": "llama3.1-70b", "name": "Llama 3.1 (70B) - Avanzado"},
+        ]
+    
+    @property
+    def api_key_url(self) -> str:
+        return "https://cloud.cerebras.ai"
+    
+    @property
+    def api_key_placeholder(self) -> str:
+        return "csk-..."
+    
+    @property
+    def setup_steps(self) -> List[str]:
+        return [
+            "Ve a cloud.cerebras.ai",
+            "Crea una cuenta gratuita",
+            "Ve a 'API Keys' y genera una clave",
+            "Copia la clave y pégala abajo"
+        ]
+    
+    async def generate_stream(
+        self,
+        prompt: str,
+        api_key: str,
+        temperature: float = 0.3,
+        model: Optional[str] = None,
+        on_token_usage: Any = None
+    ) -> AsyncGenerator[str, None]:
+        model = model or self.default_model
+        url = "https://api.cerebras.ai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature,
+            "stream": True
+        }
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                async with client.stream("POST", url, headers=headers, json=data, timeout=60) as response:
+                    logger.info(f"Cerebras API Response Status: {response.status_code}")
+                    if response.status_code != 200:
+                        error_text = await response.aread()
+                        logger.error(f"Error Cerebras API: {response.status_code} - {error_text}")
+                        yield f"Error al conectar con Cerebras: {response.status_code}"
+                        return
+
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str == "[DONE]":
+                                break
+                            try:
+                                chunk_data = json.loads(data_str)
+                                if "choices" in chunk_data:
+                                    for choice in chunk_data["choices"]:
+                                        delta = choice.get("delta", {})
+                                        if "content" in delta:
+                                            yield delta["content"]
+                                
+                                # Token usage comes in the final chunk
+                                if "usage" in chunk_data and on_token_usage:
+                                    total = chunk_data["usage"].get("total_tokens", 0)
+                                    if total > 0:
+                                        await on_token_usage(total)
+                            except json.JSONDecodeError:
+                                continue
+            except Exception as e:
+                logger.error(f"Exception in CerebrasProvider: {e}", exc_info=True)
+                yield "Ocurrió un error de conexión con Cerebras."
+
+
 class ProviderFactory:
     """Factory to get AI provider instances."""
     
@@ -481,7 +577,8 @@ class ProviderFactory:
         "gemini": GeminiProvider,
         "openai": OpenAIProvider,
         "anthropic": AnthropicProvider,
-        "local": LocalProvider
+        "local": LocalProvider,
+        "cerebras": CerebrasProvider,
     }
     
     @classmethod
