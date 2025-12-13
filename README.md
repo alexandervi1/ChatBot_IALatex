@@ -299,7 +299,7 @@ El modo local usa **Ollama** para ejecutar modelos de IA directamente en tu comp
 
 ### 📝 Editor LaTeX con Copiloto
 - **Monaco Editor**: El mismo motor que VS Code
-- **9 Plantillas Profesionales**: Artículos, tesis, CV, cartas, informes
+- **11 Plantillas Profesionales**: Artículos, tesis, CV, cartas, informes, presentaciones
 - **Acciones Contextuales IA**: Clic derecho para mejorar, traducir o corregir
 - **Compilación en Tiempo Real**: Vista previa PDF instantánea
 
