@@ -129,9 +129,10 @@ export function ChatMessages({ messages, messagesEndRef, copiedMessageIndex, han
                     components={{
                       code: ({ inline, className, children, ...props }: any) => {
                         const content = String(children).replace(/\n$/, '');
+                        const classNameStr = className || '';
 
-                        // Check if it's a mermaid diagram
-                        if (className === 'language-mermaid') {
+                        // Check if it's a mermaid diagram (handle 'language-mermaid' or 'hljs language-mermaid')
+                        if (classNameStr.includes('language-mermaid') || classNameStr.includes('mermaid')) {
                           return <MermaidDiagram chart={content} />;
                         }
 

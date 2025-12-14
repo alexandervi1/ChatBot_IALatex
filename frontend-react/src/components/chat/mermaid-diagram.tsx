@@ -7,7 +7,7 @@
  * Supports flowcharts, sequence diagrams, class diagrams, etc.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState, useId } from 'react';
 import mermaid from 'mermaid';
 
 // Initialize mermaid with custom theme
@@ -28,35 +28,46 @@ interface MermaidDiagramProps {
 }
 
 export function MermaidDiagram({ chart }: MermaidDiagramProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
     const [svg, setSvg] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const uniqueId = useId();
 
     useEffect(() => {
-        const renderDiagram = async () => {
-            if (!containerRef.current) return;
+        let isMounted = true;
 
+        const renderDiagram = async () => {
             try {
                 setIsLoading(true);
                 setError(null);
 
                 // Generate unique ID for the diagram
-                const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+                const id = `mermaid-${uniqueId.replace(/:/g, '-')}-${Date.now()}`;
 
                 // Render the diagram
-                const { svg } = await mermaid.render(id, chart);
-                setSvg(svg);
-            } catch (err) {
+                const { svg: renderedSvg } = await mermaid.render(id, chart);
+
+                if (isMounted) {
+                    setSvg(renderedSvg);
+                    setIsLoading(false);
+                }
+            } catch (err: any) {
                 console.error('Mermaid rendering error:', err);
-                setError('Error al renderizar el diagrama');
-            } finally {
-                setIsLoading(false);
+                if (isMounted) {
+                    setError(err?.message || 'Error al renderizar el diagrama');
+                    setIsLoading(false);
+                }
             }
         };
 
-        renderDiagram();
-    }, [chart]);
+        // Small delay to ensure DOM is ready
+        const timer = setTimeout(renderDiagram, 100);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+        };
+    }, [chart, uniqueId]);
 
     if (isLoading) {
         return (
@@ -71,10 +82,10 @@ export function MermaidDiagram({ chart }: MermaidDiagramProps) {
 
     if (error) {
         return (
-            <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg my-3">
-                <p className="text-sm text-destructive">{error}</p>
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg my-3">
+                <p className="text-sm text-amber-600 dark:text-amber-400 mb-2">⚠️ No se pudo renderizar el diagrama</p>
                 <details className="mt-2">
-                    <summary className="text-xs text-muted-foreground cursor-pointer">Ver código</summary>
+                    <summary className="text-xs text-muted-foreground cursor-pointer">Ver código Mermaid</summary>
                     <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-x-auto">
                         <code>{chart}</code>
                     </pre>
@@ -91,10 +102,10 @@ export function MermaidDiagram({ chart }: MermaidDiagramProps) {
                 </span>
             </div>
             <div
-                ref={containerRef}
-                className="flex justify-center"
+                className="flex justify-center [&>svg]:max-w-full"
                 dangerouslySetInnerHTML={{ __html: svg }}
             />
         </div>
     );
 }
+
