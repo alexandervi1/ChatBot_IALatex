@@ -324,7 +324,50 @@ class SearchEngine:
 - Usa formato Markdown para estructurar: tablas, listas, negritas
 - Incluye citas bibliográficas cuando sea relevante
 - Si hay historial de chat, considera el contexto de la conversación
-- IMÁGENES: Solo si el concepto se entiende MUCHO mejor con un diagrama visual (ej: ciclos, procesos, estructuras anatómicas, diagramas de flujo), añade AL FINAL esta línea exacta: [IMG_SEARCH: termino_corto_en_ingles]. Ejemplo: [IMG_SEARCH: photosynthesis diagram]. NO uses esta función para conceptos abstractos o textuales.
+
+=== DIAGRAMAS ACADÉMICOS ===
+Incluye diagramas Mermaid cuando ayuden a explicar conceptos. Son especialmente útiles para:
+
+**CIENCIAS E INGENIERÍA:**
+- Ciclos biológicos (fotosíntesis, Krebs, ciclo del agua, nitrógeno)
+- Reacciones químicas y rutas metabólicas
+- Circuitos y sistemas eléctricos
+- Arquitectura de software/hardware
+
+**UML Y SISTEMAS:**
+- Diagramas de clases (herencia, composición)
+- Diagramas de secuencia (interacciones)
+- Diagramas de estado (máquinas de estado)
+- Casos de uso
+
+**METODOLOGÍA DE INVESTIGACIÓN:**
+- Diseño experimental
+- Flujo de análisis de datos
+- Metodología paso a paso
+- Árboles de decisión
+
+**ORGANIZACIÓN Y TAXONOMÍA:**
+- Clasificaciones taxonómicas
+- Organigramas institucionales
+- Jerarquías conceptuales
+- Mapas conceptuales
+
+**FORMATO:**
+```mermaid
+graph TD
+    A[Concepto] --> B[Subconcepto 1]
+    A --> C[Subconcepto 2]
+```
+
+**TIPOS DISPONIBLES:**
+- `graph TD/LR` - Flujos y procesos
+- `sequenceDiagram` - Interacciones temporales
+- `classDiagram` - Estructuras y relaciones UML
+- `stateDiagram-v2` - Máquinas de estado
+- `erDiagram` - Entidad-Relación (bases de datos)
+- `pie` - Proporciones y porcentajes
+- `gantt` - Cronogramas de proyecto
+- `mindmap` - Mapas mentales
 
 RESPUESTA:"""
 
@@ -332,33 +375,10 @@ RESPUESTA:"""
         if api_key:
             # Use the provider factory to get the appropriate AI provider
             ai_provider = ProviderFactory.get_provider(provider)
-            full_response = ""
             
-            # Stream response but track if we need to clean IMG_SEARCH marker
+            # Stream response directly - diagrams are now handled via Mermaid in frontend
             async for chunk in ai_provider.generate_stream(final_prompt, api_key, 0.3, model, on_token_usage):
-                full_response += chunk
-                # Check if this chunk contains the IMG_SEARCH marker
-                if '[IMG_SEARCH:' in chunk:
-                    # Clean the marker from output
-                    clean_chunk = re.sub(r'\[IMG_SEARCH: .*?\]', '', chunk)
-                    if clean_chunk.strip():
-                        yield clean_chunk
-                else:
-                    yield chunk
-            
-            # Search for image if model requested it (from full response)
-            match = re.search(r'\[IMG_SEARCH: (.*?)\]', full_response)
-            if match:
-                term = match.group(1).strip()
-                # Yield a professional loading message
-                yield "\n\n---\n📷 *Buscando imagen ilustrativa...*\n"
-                
-                # Execute search (synchronous, but fast)
-                image_url, source = self._search_image(term)
-                if image_url:
-                    yield f"\n![{term}]({image_url})\n*Fuente: {source}*"
-                else:
-                    yield "\n*No se encontró una imagen adecuada para ilustrar este concepto.*"
+                yield chunk
         else:
             yield "Por favor, configura tu API Key en el menú de configuración para continuar."
             return

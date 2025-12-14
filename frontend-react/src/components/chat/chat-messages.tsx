@@ -7,6 +7,7 @@
  * - Feedback buttons (thumbs up/down)
  * - Regenerate response button
  * - Copy to clipboard functionality
+ * - Code blocks with copy button
  * - Source document accordion
  */
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -18,6 +19,8 @@ import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import { TypingIndicator } from './typing-indicator';
+import { CodeBlock } from './code-block';
+import { MermaidDiagram } from './mermaid-diagram';
 import { useState } from 'react';
 import { useToast } from '@/lib/hooks/use-toast';
 
@@ -120,7 +123,35 @@ export function ChatMessages({ messages, messagesEndRef, copiedMessageIndex, han
                 {messages.length - 1 === index && message.role === 'ai' && !message.content ? (
                   <TypingIndicator />
                 ) : (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{message.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                    components={{
+                      code: ({ inline, className, children, ...props }: any) => {
+                        const content = String(children).replace(/\n$/, '');
+
+                        // Check if it's a mermaid diagram
+                        if (className === 'language-mermaid') {
+                          return <MermaidDiagram chart={content} />;
+                        }
+
+                        if (inline) {
+                          return (
+                            <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-sm" {...props}>
+                              {children}
+                            </code>
+                          );
+                        }
+                        return (
+                          <CodeBlock className={className}>
+                            {content}
+                          </CodeBlock>
+                        );
+                      }
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
                 )}
               </div>
               {message.role === 'ai' && message.source && (
