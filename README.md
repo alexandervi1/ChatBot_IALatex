@@ -301,10 +301,15 @@ El modo local usa **Ollama** para ejecutar modelos de IA directamente en tu comp
 - **Historial de Conversación**: Contexto mantenido entre preguntas
 
 ### 📝 Editor LaTeX con Copiloto
-- **Monaco Editor**: El mismo motor que VS Code
+- **Interfaz Estilo VS Code**: Barra de iconos vertical para acceso rápido
+- **Paneles Colapsables**: Documentos, Outline, Símbolos (toggle con un clic)
+- **Autocompletado 80+ Comandos**: Comandos LaTeX con snippets inteligentes
+- **58 Símbolos Matemáticos**: Inserción rápida por categorías (griego, operadores, flechas)
+- **Navegación por Outline**: Panel de estructura con clic para navegar
 - **11 Plantillas Profesionales**: Artículos, tesis, CV, cartas, informes, presentaciones
 - **Acciones Contextuales IA**: Clic derecho para mejorar, traducir o corregir
 - **Compilación en Tiempo Real**: Vista previa PDF instantánea
+- **Optimizado para 1366x768**: UI compacta y eficiente
 
 ### 🔐 Seguridad Empresarial
 - **JWT + Refresh Tokens**: Rotación automática cada 30 minutos
@@ -456,13 +461,22 @@ El modo local usa **Ollama** para ejecutar modelos de IA directamente en tu comp
 ### 5. Usar el Editor LaTeX
 
 1. Cambia a la pestaña "Copiloto" en el header
-2. Usa las plantillas predefinidas o escribe desde cero
-3. **Acciones IA**: Selecciona texto y haz clic derecho para:
+2. **Barra de Iconos (izquierda)**:
+   - 📁 Documentos: Toggle panel de documentos
+   - 📑 Estructura: Ver outline del documento
+   - 🔢 Símbolos: Insertar símbolos matemáticos
+3. **Herramientas (header del editor)**:
+   - 🔧 Toggle toolbar
+   - 📊 Toggle estadísticas
+   - ✨ Toggle barra IA
+4. Usa las plantillas predefinidas o escribe desde cero
+5. **Autocompletado**: Escribe `\` para ver sugerencias de comandos
+6. **Acciones IA**: Selecciona texto y haz clic derecho para:
    - Mejorar redacción
    - Traducir
    - Corregir gramática
    - Generar citas
-4. Haz clic en "Vista Previa" para ver el PDF compilado
+7. Haz clic en "Compilar" para ver el PDF
 
 ---
 

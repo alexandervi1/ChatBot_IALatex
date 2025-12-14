@@ -171,15 +171,27 @@ export function UserManual({ open, onOpenChange }: UserManualProps) {
                   ]} cols={2} />
                 </SubSection>
 
+                <SubSection title="Interfaz Estilo VS Code" icon={<FileCode className="h-4 w-4" />}>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Barra de iconos lateral para acceso rápido:
+                  </p>
+                  <FeatureGrid features={[
+                    "📁 Panel de Documentos (toggle)",
+                    "📑 Panel de Estructura/Outline",
+                    "🔢 Panel de Símbolos Matemáticos",
+                    "🎛️ Secciones colapsables"
+                  ]} cols={2} />
+                </SubSection>
+
                 <FeatureGrid features={[
-                  "Editor Monaco (como VS Code)",
-                  "Resaltado de sintaxis LaTeX",
-                  "Compilación en tiempo real",
-                  "Vista previa PDF integrada",
-                  "Scroll sincronizado",
-                  "Plantillas personalizadas",
-                  "Descarga PDF directo",
-                  "Citas automáticas"
+                  "Editor Monaco profesional",
+                  "Autocompletado 80+ comandos",
+                  "Snippets inteligentes",
+                  "Símbolos matemáticos (clic)",
+                  "Navegación por secciones",
+                  "Compilación PDF en tiempo real",
+                  "Vista previa sincronizada",
+                  "Plantillas personalizables"
                 ]} />
               </div>
             </Section>
