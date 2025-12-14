@@ -96,18 +96,42 @@ export function UserManual({ open, onOpenChange }: UserManualProps) {
                   <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
                     <li>Escribe tu pregunta en el campo de texto inferior</li>
                     <li><strong>(Opcional)</strong> Filtra por documentos específicos con los checkboxes</li>
-                    <li>Presiona <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Enter</kbd> o haz clic en enviar</li>
+                    <li>Presiona <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Ctrl</kbd>+<kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Enter</kbd> para enviar</li>
                     <li>La IA buscará en tus documentos y generará una respuesta contextual</li>
                   </ol>
                 </SubSection>
 
+                <SubSection title="Slash Commands" icon={<Sparkles className="h-4 w-4" />}>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Escribe <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">/</kbd> para ver comandos disponibles:
+                  </p>
+                  <div className="grid grid-cols-2 gap-1 text-xs">
+                    <div><code>/resumen</code> - Resumen conciso</div>
+                    <div><code>/traducir</code> - Traduce a inglés</div>
+                    <div><code>/explicar</code> - Explica simple</div>
+                    <div><code>/tabla</code> - Formato tabla</div>
+                    <div><code>/puntos</code> - Bullet points</div>
+                    <div><code>/analizar</code> - Análisis profundo</div>
+                  </div>
+                </SubSection>
+
+                <SubSection title="Diagramas Automáticos" icon={<FileCode className="h-4 w-4" />}>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    La IA genera diagramas Mermaid profesionales cuando son útiles:
+                  </p>
+                  <FeatureGrid features={[
+                    "Diagramas de flujo",
+                    "UML (clases, secuencia)",
+                    "Entidad-Relación",
+                    "Mapas mentales"
+                  ]} cols={2} />
+                </SubSection>
+
                 <FeatureGrid features={[
-                  "Historial de conversación persistente",
-                  "Respuestas en streaming (tiempo real)",
-                  "Citas y referencias a documentos fuente",
-                  "Búsqueda híbrida (semántica + keywords)",
-                  "Re-ranking inteligente de resultados",
-                  "Formato TOON: ahorra 30-60% tokens"
+                  "Copy código con 1 clic",
+                  "Botón regenerar respuesta",
+                  "Contador 0/4000 caracteres",
+                  "Búsqueda híbrida RAG"
                 ]} />
               </div>
             </Section>

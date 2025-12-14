@@ -295,10 +295,14 @@ El modo local usa **Ollama** para ejecutar modelos de IA directamente en tu comp
 - **Filtrado por Fuentes**: Busca solo en documentos seleccionados
 
 ### 💬 Chat Inteligente
-- **4 Proveedores de IA**: Elige el que mejor se adapte a tus necesidades
+- **4 Proveedores de IA**: Gemini, Cerebras, OpenAI, Anthropic
+- **Slash Commands**: `/resumen`, `/traducir`, `/explicar`, `/tabla`, `/puntos`, `/analizar`
+- **Diagramas Mermaid**: Genera automáticamente diagramas UML, flujos, ER, Gantt
+- **Copy Código**: Botón copiar en bloques de código con feedback visual
+- **Input Mejorado**: Textarea expandible, contador 0/4000, Ctrl+Enter
+- **Botón Regenerar**: Regenera respuestas con un clic
 - **Preguntas Sugeridas**: Generación automática al cargar documentos
 - **Formato TOON**: Reduce consumo de tokens en **30-60%**
-- **Historial de Conversación**: Contexto mantenido entre preguntas
 
 ### 📝 Editor LaTeX con Copiloto
 - **Interfaz Estilo VS Code**: Barra de iconos vertical para acceso rápido
