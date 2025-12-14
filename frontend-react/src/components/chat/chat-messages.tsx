@@ -5,6 +5,7 @@
  * - User and AI message distinction
  * - Markdown rendering with syntax highlighting
  * - Feedback buttons (thumbs up/down)
+ * - Regenerate response button
  * - Copy to clipboard functionality
  * - Source document accordion
  */
@@ -12,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChatMessage, submitFeedback } from "@/lib/api-client";
-import { Check, Copy, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { Check, Copy, ThumbsDown, ThumbsUp, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
@@ -30,9 +31,13 @@ interface ChatMessagesProps {
   copiedMessageIndex: number | null;
   /** Callback when user copies a message */
   handleCopy: (content: string, index: number) => void;
+  /** Callback to regenerate an AI response */
+  onRegenerate?: (userQuery: string) => void;
+  /** Whether chat is loading */
+  isLoading?: boolean;
 }
 
-export function ChatMessages({ messages, messagesEndRef, copiedMessageIndex, handleCopy }: ChatMessagesProps) {
+export function ChatMessages({ messages, messagesEndRef, copiedMessageIndex, handleCopy, onRegenerate, isLoading }: ChatMessagesProps) {
   const [feedbackSent, setFeedbackSent] = useState<{ [key: number]: 'positive' | 'negative' | null }>({});
   const { toast } = useToast();
 
@@ -87,6 +92,22 @@ export function ChatMessages({ messages, messagesEndRef, copiedMessageIndex, han
                       </TooltipTrigger>
                       <TooltipContent><p>Copiar</p></TooltipContent>
                     </Tooltip>
+                    {onRegenerate && index > 0 && messages[index - 1]?.role === 'user' && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => onRegenerate(messages[index - 1].content)}
+                            disabled={isLoading}
+                          >
+                            <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Regenerar respuesta</p></TooltipContent>
+                      </Tooltip>
+                    )}
                   </TooltipProvider>
                 )}
               </div>

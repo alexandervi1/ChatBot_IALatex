@@ -108,17 +108,43 @@ class SearchEngine:
                 highlighted_context_parts.append(sentence.strip())
         return " ".join(highlighted_context_parts)
 
-    def _search_image(self, query: str) -> str | None:
+    def _search_image(self, query: str) -> tuple[str | None, str]:
+        """
+        Search for an educational/reliable image.
+        Returns tuple of (image_url, source_name) or (None, "")
+        Prioritizes: Wikipedia, Wikimedia Commons, educational sources.
+        """
         try:
-            # Usar DDGS para buscar imagenes
+            # Add educational/reliable source keywords to improve results
+            enhanced_query = f"{query} diagram wikipedia OR wikimedia OR educational"
+            
             with DDGS() as ddgs:
-                # Buscar 1 imagen
-                results = list(ddgs.images(query, max_results=1))
+                # Get several results to filter for quality
+                results = list(ddgs.images(
+                    enhanced_query, 
+                    max_results=5,
+                    safesearch='moderate'
+                ))
+                
                 if results:
-                    return results[0]['image']
+                    # Prioritize reliable sources
+                    reliable_domains = ['wikipedia.org', 'wikimedia.org', 'edu', 'researchgate.net', 'nature.com', 'sciencedirect.com']
+                    
+                    for result in results:
+                        url = result.get('image', '')
+                        source = result.get('source', '')
+                        
+                        # Check if from reliable source
+                        for domain in reliable_domains:
+                            if domain in url or domain in source:
+                                return (url, source.split('/')[2] if '/' in source else 'Fuente confiable')
+                    
+                    # If no reliable source found, use first result
+                    return (results[0]['image'], 'Imagen ilustrativa')
+                    
         except Exception as e:
             logger.error(f"Error searching image for '{query}': {e}")
-        return None
+        return (None, "")
 
     def _semantic_search(self, db: Session, query_embedding: List[float], top_k: int, owner_id: int, source_files: List[str] | None) -> List[Dict[str, Any]]:
         params = {"query_embedding": str(query_embedding), "top_k": top_k, "owner_id": owner_id}
@@ -295,9 +321,10 @@ class SearchEngine:
 - Responde basándote ÚNICAMENTE en el contexto proporcionado
 - Si la información no está en el contexto, indícalo claramente
 - Responde en español de forma clara y concisa
+- Usa formato Markdown para estructurar: tablas, listas, negritas
 - Incluye citas bibliográficas cuando sea relevante
 - Si hay historial de chat, considera el contexto de la conversación
-- Si una imagen visual ayudaría a explicar mejor el concepto, al final de tu respuesta escribe una línea con el formato: `[IMG_SEARCH: termino_de_busqueda]`. Reemplaza `termino_de_busqueda` con una descripción breve de la imagen deseada (ej. 'diagrama fotosintesis').
+- IMÁGENES: Solo si el concepto se entiende MUCHO mejor con un diagrama visual (ej: ciclos, procesos, estructuras anatómicas, diagramas de flujo), añade AL FINAL esta línea exacta: [IMG_SEARCH: termino_corto_en_ingles]. Ejemplo: [IMG_SEARCH: photosynthesis diagram]. NO uses esta función para conceptos abstractos o textuales.
 
 RESPUESTA:"""
 
@@ -306,18 +333,32 @@ RESPUESTA:"""
             # Use the provider factory to get the appropriate AI provider
             ai_provider = ProviderFactory.get_provider(provider)
             full_response = ""
+            
+            # Stream response but track if we need to clean IMG_SEARCH marker
             async for chunk in ai_provider.generate_stream(final_prompt, api_key, 0.3, model, on_token_usage):
                 full_response += chunk
-                yield chunk
+                # Check if this chunk contains the IMG_SEARCH marker
+                if '[IMG_SEARCH:' in chunk:
+                    # Clean the marker from output
+                    clean_chunk = re.sub(r'\[IMG_SEARCH: .*?\]', '', chunk)
+                    if clean_chunk.strip():
+                        yield clean_chunk
+                else:
+                    yield chunk
             
-            # Buscar imagen si el modelo lo solicita
+            # Search for image if model requested it (from full response)
             match = re.search(r'\[IMG_SEARCH: (.*?)\]', full_response)
             if match:
-                term = match.group(1)
-                # Ejecutar busqueda (sincrona, pero rapida)
-                image_url = self._search_image(term)
+                term = match.group(1).strip()
+                # Yield a professional loading message
+                yield "\n\n---\n📷 *Buscando imagen ilustrativa...*\n"
+                
+                # Execute search (synchronous, but fast)
+                image_url, source = self._search_image(term)
                 if image_url:
-                    yield f"\n\n![{term}]({image_url})"
+                    yield f"\n![{term}]({image_url})\n*Fuente: {source}*"
+                else:
+                    yield "\n*No se encontró una imagen adecuada para ilustrar este concepto.*"
         else:
             yield "Por favor, configura tu API Key en el menú de configuración para continuar."
             return

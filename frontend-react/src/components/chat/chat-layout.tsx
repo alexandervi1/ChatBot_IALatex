@@ -216,6 +216,15 @@ export function ChatLayout() {
                     messagesEndRef={messagesEndRef}
                     copiedMessageIndex={copiedMessageIndex}
                     handleCopy={handleCopy}
+                    onRegenerate={(query) => {
+                      setInput(query);
+                      // Trigger submit after setting input
+                      setTimeout(() => {
+                        const form = document.querySelector('form');
+                        if (form) form.requestSubmit();
+                      }, 100);
+                    }}
+                    isLoading={isLoading}
                   />
                 )}
                 <ChatInput

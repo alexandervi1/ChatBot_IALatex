@@ -52,14 +52,14 @@ export function UserManual({ open, onOpenChange }: UserManualProps) {
                   icon={<Cloud className="h-4 w-4" />}
                   name="Google Gemini"
                   desc="Rápido, económico, recomendado"
-                  features={["gemini-2.5-flash", "gemini-1.5-pro"]}
+                  features={["gemini-2.5-flash", "gemini-2.5-pro"]}
                   highlight
                 />
                 <ProviderCard
                   icon={<Zap className="h-4 w-4" />}
                   name="Cerebras"
                   desc="Ultra-rápido, capa gratuita"
-                  features={["llama3.1-8b", "llama-3.3-70b"]}
+                  features={["llama-3.3-70b", "qwen-3-32b"]}
                   highlight
                 />
                 <ProviderCard

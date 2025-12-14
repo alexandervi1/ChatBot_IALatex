@@ -88,8 +88,9 @@ class GeminiProvider(AIProvider):
     def models(self) -> List[Dict[str, str]]:
         return [
             {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash (Rápido)"},
-            {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro (Avanzado)"},
-            {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash"}
+            {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro (Avanzado)"},
+            {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash"},
+            {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro"}
         ]
     
     @property
@@ -487,14 +488,14 @@ class CerebrasProvider(AIProvider):
     
     @property
     def default_model(self) -> str:
-        return "llama3.1-8b"
+        return "llama-3.3-70b"
     
     @property
     def models(self) -> List[Dict[str, str]]:
         return [
-            {"id": "llama-4-scout-17b-16e-instruct", "name": "Llama 4 Scout (17B) - Ultra Rápido"},
-            {"id": "llama3.1-8b", "name": "Llama 3.1 (8B) - Económico"},
             {"id": "llama-3.3-70b", "name": "Llama 3.3 (70B) - Avanzado"},
+            {"id": "llama3.1-8b", "name": "Llama 3.1 (8B) - Económico"},
+            {"id": "qwen-3-32b", "name": "Qwen 3 (32B) - Multilenguaje"},
         ]
     
     @property
