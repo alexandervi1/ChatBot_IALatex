@@ -487,14 +487,14 @@ class CerebrasProvider(AIProvider):
     
     @property
     def default_model(self) -> str:
-        return "llama-4-scout-17b-16e-instruct"
+        return "llama3.1-8b"
     
     @property
     def models(self) -> List[Dict[str, str]]:
         return [
             {"id": "llama-4-scout-17b-16e-instruct", "name": "Llama 4 Scout (17B) - Ultra Rápido"},
             {"id": "llama3.1-8b", "name": "Llama 3.1 (8B) - Económico"},
-            {"id": "llama3.1-70b", "name": "Llama 3.1 (70B) - Avanzado"},
+            {"id": "llama-3.3-70b", "name": "Llama 3.3 (70B) - Avanzado"},
         ]
     
     @property
@@ -577,7 +577,6 @@ class ProviderFactory:
         "gemini": GeminiProvider,
         "openai": OpenAIProvider,
         "anthropic": AnthropicProvider,
-        "local": LocalProvider,
         "cerebras": CerebrasProvider,
     }
     

@@ -14,6 +14,9 @@ import { DocumentList } from './document-list';
 import { WelcomeScreen } from './welcome-screen';
 import { UserManual } from './user-manual';
 import { ApiKeyGuide } from './api-key-guide';
+import { IconSidebar } from './icon-sidebar';
+import { OutlinePanel } from './outline-panel';
+import { SymbolsPanel } from './symbols-panel';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 // Custom hook for chat state management
@@ -30,8 +33,9 @@ const CopilotEditor = dynamic(
  * Orchestrates the UI composition using extracted components and hooks.
  * 
  * Architecture:
+ * - IconSidebar: VS Code style icon bar (NEW)
  * - ChatHeader: Navigation, mode toggle, user actions
- * - DocumentList: Sidebar with document management
+ * - DocumentList: Sidebar with document management (collapsible)
  * - ChatMessages/WelcomeScreen: Main chat area
  * - CopilotEditor: LaTeX editing mode
  * - useChatState: All business logic and state
@@ -40,6 +44,7 @@ export function ChatLayout() {
   const { logout } = useAuth();
   const [mode, setMode] = useState<'chat' | 'copilot'>('chat');
   const [isManualOpen, setIsManualOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<'documents' | 'outline' | 'symbols' | null>('documents');
 
   // All chat/document/copilot state and handlers from custom hook
   const {
@@ -133,18 +138,50 @@ export function ChatLayout() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Document List */}
-        <DocumentList
-          documents={documents}
-          uploadStatus={uploadStatus}
-          deletingId={deletingId}
-          docSearchTerm={docSearchTerm}
-          setDocSearchTerm={setDocSearchTerm}
-          handleUploadClick={handleUploadClick}
-          handleDocSelectionChange={handleDocSelectionChange}
-          handleDelete={handleDelete}
-          fetchDocuments={fetchDocuments}
+        {/* VS Code Style Icon Sidebar */}
+        <IconSidebar
+          activePanel={activePanel}
+          onPanelChange={setActivePanel}
+          mode={mode}
         />
+
+        {/* Sidebar - Document List (Collapsible) */}
+        {activePanel === 'documents' && (
+          <DocumentList
+            documents={documents}
+            uploadStatus={uploadStatus}
+            deletingId={deletingId}
+            docSearchTerm={docSearchTerm}
+            setDocSearchTerm={setDocSearchTerm}
+            handleUploadClick={handleUploadClick}
+            handleDocSelectionChange={handleDocSelectionChange}
+            handleDelete={handleDelete}
+            fetchDocuments={fetchDocuments}
+          />
+        )}
+
+        {/* Sidebar - Outline Panel (Copilot mode only) */}
+        {activePanel === 'outline' && mode === 'copilot' && (
+          <OutlinePanel
+            text={copilotText}
+            onNavigate={(line) => {
+              // Navigate handled by CopilotEditor via ref
+              const event = new CustomEvent('navigate-to-line', { detail: { line } });
+              window.dispatchEvent(event);
+            }}
+          />
+        )}
+
+        {/* Sidebar - Symbols Panel (Copilot mode only) */}
+        {activePanel === 'symbols' && mode === 'copilot' && (
+          <SymbolsPanel
+            onInsert={(latex) => {
+              // Insert handled by CopilotEditor via ref
+              const event = new CustomEvent('insert-symbol', { detail: { latex } });
+              window.dispatchEvent(event);
+            }}
+          />
+        )}
 
         {/* Main Area */}
         <main className="flex flex-1 flex-col bg-background/80 backdrop-blur-lg">

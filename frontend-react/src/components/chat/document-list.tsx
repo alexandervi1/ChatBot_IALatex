@@ -31,9 +31,9 @@ export function DocumentList({
   fetchDocuments
 }: DocumentListProps) {
   return (
-    <aside className="hidden md:flex md:w-1/4 lg:w-1/5 flex-col gap-3 md:gap-4 overflow-y-auto border-r p-3 md:p-4 bg-muted/40">
+    <aside className="hidden md:flex md:w-[180px] lg:w-[200px] flex-col gap-2 overflow-y-auto border-r p-2 lg:p-3 bg-muted/40">
       <div className="flex justify-between items-center">
-        <h2 className="text-base md:text-lg font-semibold">Documentos</h2>
+        <h2 className="text-sm lg:text-base font-semibold">Documentos</h2>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

@@ -11,7 +11,6 @@ import {
   BookOpen,
   Cpu,
   Cloud,
-  Server,
   Palette,
   Check,
   HelpCircle,
@@ -54,6 +53,14 @@ export function UserManual({ open, onOpenChange }: UserManualProps) {
                   name="Google Gemini"
                   desc="Rápido, económico, recomendado"
                   features={["gemini-2.5-flash", "gemini-1.5-pro"]}
+                  highlight
+                />
+                <ProviderCard
+                  icon={<Zap className="h-4 w-4" />}
+                  name="Cerebras"
+                  desc="Ultra-rápido, capa gratuita"
+                  features={["llama3.1-8b", "llama-3.3-70b"]}
+                  highlight
                 />
                 <ProviderCard
                   icon={<Cloud className="h-4 w-4" />}
@@ -67,15 +74,8 @@ export function UserManual({ open, onOpenChange }: UserManualProps) {
                   desc="Preciso, seguro"
                   features={["claude-3-5-sonnet", "claude-3-haiku"]}
                 />
-                <ProviderCard
-                  icon={<Server className="h-4 w-4" />}
-                  name="Local (Ollama)"
-                  desc="Sin API key, 100% privado"
-                  features={["llama3.2", "llama3.1", "mistral"]}
-                  highlight
-                />
               </div>
-              <Tip>Local (Ollama) no requiere API key pero necesita 8GB+ RAM.</Tip>
+              <Tip>Gemini y Cerebras tienen capa gratuita. OpenAI y Anthropic requieren pago.</Tip>
             </Section>
 
             <Separator />
@@ -192,7 +192,7 @@ export function UserManual({ open, onOpenChange }: UserManualProps) {
                 <ConfigCard
                   icon={<Cpu className="h-4 w-4" />}
                   title="Proveedor de IA"
-                  items={["Cambiar entre Gemini, OpenAI, Anthropic o Local", "Actualizar API key en cualquier momento", "Ver consumo de tokens"]}
+                  items={["Cambiar entre Gemini, OpenAI, Anthropic o Cerebras", "Seleccionar modelo específico", "Ver consumo de tokens"]}
                 />
                 <ConfigCard
                   icon={<Palette className="h-4 w-4" />}
@@ -225,7 +225,7 @@ export function UserManual({ open, onOpenChange }: UserManualProps) {
                 <TipCard color="green" title="⚡ Ahorro de Tokens">
                   <ul className="text-xs space-y-0.5">
                     <li>• Formato TOON reduce consumo 30-60% automáticamente</li>
-                    <li>• Modelo local (Ollama) = sin costo de API</li>
+                    <li>• Gemini y Cerebras = capa gratuita generosa</li>
                   </ul>
                 </TipCard>
               </div>

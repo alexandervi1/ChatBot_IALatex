@@ -3,17 +3,20 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Wand2, Download, Eye, Loader2, AlertTriangle, BookMarked, Save, Quote, BarChart } from 'lucide-react';
+import { Wand2, Download, Eye, Loader2, AlertTriangle, BookMarked, Save, Quote, BarChart, PanelLeftClose, PanelLeft, ChevronUp, ChevronDown, Wrench } from 'lucide-react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { useState, useEffect, useRef } from 'react';
 import { latexTemplates, LaTeXTemplate } from '@/lib/latex-templates';
+import { registerLatexCompletions } from '@/lib/latex-completions';
 import { streamCopilot } from '@/lib/api-client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from "@/lib/hooks/use-toast";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { generateCitation, parseCitationInput, type CitationFormat } from '@/lib/citation-utils';
+import { DocumentOutline } from './document-outline';
+import { SymbolPicker } from './symbol-picker';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
@@ -40,6 +43,10 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
   const [isCitationDialogOpen, setIsCitationDialogOpen] = useState(false);
   const [citationFormat, setCitationFormat] = useState<'APA' | 'IEEE' | 'Chicago' | 'MLA'>('APA');
   const [citationInput, setCitationInput] = useState('');
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [showToolbar, setShowToolbar] = useState(true);
+  const [showStats, setShowStats] = useState(true);
+  const [showAiBar, setShowAiBar] = useState(true);
   const { toast } = useToast();
   const isMobile = useMediaQuery('(max-width: 767px)');
 
@@ -51,6 +58,52 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
   const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
   const charCount = text.length;
   const lineCount = text.split('\n').length;
+
+  // Navigate to specific line in editor
+  const handleNavigateToLine = (line: number) => {
+    if (editorInstanceRef.current) {
+      editorInstanceRef.current.revealLineInCenter(line);
+      editorInstanceRef.current.setPosition({ lineNumber: line, column: 1 });
+      editorInstanceRef.current.focus();
+    }
+  };
+
+  // Insert symbol at cursor position
+  const handleInsertSymbol = (latex: string) => {
+    if (editorInstanceRef.current) {
+      const editor = editorInstanceRef.current;
+      const position = editor.getPosition();
+      editor.executeEdits('symbol', [{
+        range: {
+          startLineNumber: position.lineNumber,
+          startColumn: position.column,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column
+        },
+        text: latex,
+        forceMoveMarkers: true
+      }]);
+      editor.focus();
+    }
+  };
+
+  // Listen for navigation events from OutlinePanel
+  useEffect(() => {
+    const handleNavigate = (e: CustomEvent<{ line: number }>) => {
+      handleNavigateToLine(e.detail.line);
+    };
+    window.addEventListener('navigate-to-line', handleNavigate as EventListener);
+    return () => window.removeEventListener('navigate-to-line', handleNavigate as EventListener);
+  }, []);
+
+  // Listen for symbol insert events from SymbolsPanel
+  useEffect(() => {
+    const handleInsert = (e: CustomEvent<{ latex: string }>) => {
+      handleInsertSymbol(e.detail.latex);
+    };
+    window.addEventListener('insert-symbol', handleInsert as EventListener);
+    return () => window.removeEventListener('insert-symbol', handleInsert as EventListener);
+  }, []);
 
   useEffect(() => {
     const savedTemplates = localStorage.getItem('custom_latex_templates');
@@ -176,8 +229,17 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
     }
   };
 
+  // Track if completions are registered (only once per session)
+  const completionsRegistered = useRef(false);
+
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorInstanceRef.current = editor;
+
+    // Register LaTeX autocompletions (only once)
+    if (!completionsRegistered.current) {
+      registerLatexCompletions(monaco);
+      completionsRegistered.current = true;
+    }
 
     // Add Context Menu Actions
     editor.addAction({
@@ -414,14 +476,51 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
 
       <PanelGroup direction={isMobile ? "vertical" : "horizontal"} className="h-full">
         <Panel defaultSize={50} minSize={30}>
-          <div className="flex flex-col h-full p-2 md:p-4 gap-2 md:gap-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-base md:text-lg font-semibold">Editor LaTeX</h3>
-              <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+          <div className="flex flex-col h-full p-1.5 lg:p-3 gap-0.5">
+            {/* Compact Header with Toggle Buttons */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm md:text-base font-semibold">Editor LaTeX</h3>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setShowToolbar(!showToolbar)}
+                  title={showToolbar ? "Ocultar herramientas" : "Mostrar herramientas"}
+                >
+                  <Wrench className="h-3 w-3 mr-1" />
+                  {showToolbar ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setShowStats(!showStats)}
+                  title={showStats ? "Ocultar estadísticas" : "Mostrar estadísticas"}
+                >
+                  <BarChart className="h-3 w-3 mr-1" />
+                  {showStats ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setShowAiBar(!showAiBar)}
+                  title={showAiBar ? "Ocultar asistente IA" : "Mostrar asistente IA"}
+                >
+                  <Wand2 className="h-3 w-3 mr-1" />
+                  {showAiBar ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </Button>
+              </div>
+            </div>
+
+            {/* Collapsible Toolbar */}
+            {showToolbar && (
+              <div className="flex items-center gap-0.5 lg:gap-1 flex-wrap py-0.5 border-b">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="text-xs md:text-sm">
-                      <BookMarked className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                    <Button variant="outline" size="sm" className="text-xs md:text-sm h-7">
+                      <BookMarked className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                       <span className="hidden sm:inline">Plantillas</span>
                     </Button>
                   </DropdownMenuTrigger>
@@ -560,53 +659,82 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
                   <span className="hidden lg:inline">Compilar</span>
                 </Button>
               </div>
+            )}
+
+            {/* Collapsible Document Statistics Bar */}
+            {showStats && (
+              <div className="flex items-center gap-2 lg:gap-4 text-[11px] lg:text-xs text-muted-foreground border-t border-b py-0.5">
+                <div className="flex items-center gap-1">
+                  <BarChart className="h-3 w-3" />
+                  <span className="font-medium">{wordCount}</span> palabras
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium">{lineCount}</span> líneas
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium">{charCount}</span> caracteres
+                </div>
+                <div className="ml-auto">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2"
+                    onClick={() => setShowSidebar(!showSidebar)}
+                    title={showSidebar ? "Ocultar panel" : "Mostrar panel"}
+                  >
+                    {showSidebar ? <PanelLeftClose className="h-3 w-3" /> : <PanelLeft className="h-3 w-3" />}
+                  </Button>
+                </div>
+              </div>
+            )}
+            {/* Editor + Sidebar Container */}
+            <div className="relative flex-grow h-full overflow-hidden flex gap-2">
+              {/* Sidebar Panel - Outline & Symbols */}
+              {showSidebar && !isMobile && (
+                <div className="w-48 flex-shrink-0 border rounded-md bg-card flex flex-col overflow-hidden">
+                  <DocumentOutline text={text} onNavigate={handleNavigateToLine} />
+                  <SymbolPicker onInsert={handleInsertSymbol} />
+                </div>
+              )}
+
+              {/* Monaco Editor */}
+              <div className="flex-grow border rounded-md overflow-hidden">
+                <Editor
+                  height="100%"
+                  defaultLanguage="latex"
+                  theme="vs-dark"
+                  value={text}
+                  onChange={(value) => setText(value || '')}
+                  onMount={handleEditorDidMount}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    wordWrap: 'on',
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                  }}
+                />
+              </div>
             </div>
 
-            {/* Document Statistics Bar */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground border-t border-b py-2">
-              <div className="flex items-center gap-1">
-                <BarChart className="h-3 w-3" />
-                <span className="font-medium">{wordCount}</span> palabras
+            {/* Collapsible AI Instruction Bar */}
+            {showAiBar && (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  placeholder="Ej: 'Crea un resumen del documento X', 'Expande el párrafo anterior', 'Corrige la gramática'..."
+                  className="flex-1 h-8 text-sm"
+                  value={instruction}
+                  onChange={(e) => setInstruction(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                />
+                <Button onClick={handleSubmit} disabled={isLoading} size="sm" className="h-8 w-8 p-0">
+                  <Wand2 className="h-4 w-4" />
+                </Button>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="font-medium">{lineCount}</span> líneas
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-medium">{charCount}</span> caracteres
-              </div>
-            </div>
-            <div className="relative flex-grow h-full overflow-hidden border rounded-md">
-              <Editor
-                height="100%"
-                defaultLanguage="latex"
-                theme="vs-dark"
-                value={text}
-                onChange={(value) => setText(value || '')}
-                onMount={handleEditorDidMount}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  wordWrap: 'on',
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                }}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                placeholder="Ej: 'Crea un resumen del documento X', 'Expande el párrafo anterior', 'Corrige la gramática'..."
-                className="flex-1"
-                value={instruction}
-                onChange={(e) => setInstruction(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              />
-              <Button onClick={handleSubmit} disabled={isLoading} size="icon">
-                <Wand2 className="h-5 w-5" />
-              </Button>
-            </div>
+            )}
           </div>
-        </Panel>
+        </Panel >
         <PanelResizeHandle className={isMobile ? "h-2 bg-border hover:bg-primary transition-colors" : "w-2 bg-border hover:bg-primary transition-colors"} />
         <Panel defaultSize={50}>
           <div className="flex flex-col h-full">
@@ -622,7 +750,7 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
             </div>
           </div>
         </Panel>
-      </PanelGroup>
+      </PanelGroup >
     </>
   );
 }

@@ -36,6 +36,7 @@ const DEFAULT_PROVIDERS: AIProvider[] = [
 export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
     const [apiKey, setApiKey] = useState('');
     const [selectedProvider, setSelectedProvider] = useState<string>('gemini');
+    const [selectedModel, setSelectedModel] = useState<string>('');
     const [providers, setProviders] = useState<AIProvider[]>(DEFAULT_PROVIDERS);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -55,6 +56,10 @@ export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
                     if (user?.ai_provider) {
                         setSelectedProvider(user.ai_provider);
                     }
+                    // Set initial model from user settings
+                    if (user?.ai_model) {
+                        setSelectedModel(user.ai_model);
+                    }
                 })
                 .catch(err => {
                     console.error("Failed to load providers:", err);
@@ -62,9 +67,25 @@ export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
                 })
                 .finally(() => setIsLoading(false));
         }
-    }, [isOpen, user?.ai_provider]);
+    }, [isOpen, user?.ai_provider, user?.ai_model]);
 
     const currentProvider = providers.find(p => p.id === selectedProvider) || providers[0];
+
+    // When provider changes, set default model for that provider
+    useEffect(() => {
+        if (currentProvider && !selectedModel) {
+            setSelectedModel(currentProvider.default_model);
+        }
+    }, [currentProvider, selectedModel]);
+
+    // Reset model when provider changes
+    const handleProviderChange = (providerId: string) => {
+        setSelectedProvider(providerId);
+        const provider = providers.find(p => p.id === providerId);
+        if (provider) {
+            setSelectedModel(provider.default_model);
+        }
+    };
 
     const handleSubmit = async () => {
         // Allow empty API key for local provider
@@ -75,7 +96,8 @@ export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
         try {
             await updateProfile({
                 gemini_api_key: apiKey,
-                ai_provider: selectedProvider
+                ai_provider: selectedProvider,
+                ai_model: selectedModel
             });
             toast({
                 title: "Configuración guardada",
@@ -132,7 +154,7 @@ export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
                             </Label>
                             <Select
                                 value={selectedProvider}
-                                onValueChange={setSelectedProvider}
+                                onValueChange={handleProviderChange}
                                 disabled={isLoading}
                             >
                                 <SelectTrigger id="provider">
@@ -147,6 +169,34 @@ export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        {/* Model Selection */}
+                        {currentProvider && currentProvider.models.length > 0 && (
+                            <div className="space-y-2">
+                                <Label htmlFor="model" className="flex items-center gap-2">
+                                    🤖 Modelo
+                                </Label>
+                                <Select
+                                    value={selectedModel || currentProvider.default_model}
+                                    onValueChange={setSelectedModel}
+                                    disabled={isLoading}
+                                >
+                                    <SelectTrigger id="model">
+                                        <SelectValue placeholder="Selecciona un modelo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {currentProvider.models.map(model => (
+                                            <SelectItem key={model.id} value={model.id}>
+                                                {model.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-[0.75rem] text-muted-foreground">
+                                    Modelo por defecto: {currentProvider.default_model}
+                                </p>
+                            </div>
+                        )}
 
                         {/* Provider-specific info */}
                         {currentProvider && (
