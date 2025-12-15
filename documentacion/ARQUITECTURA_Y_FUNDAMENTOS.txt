@@ -1,0 +1,1195 @@
+================================================================================
+              CHATBOT IA CON COPILOTO LATEX - ARQUITECTURA Y FUNDAMENTOS
+                          Documento Técnico para Defensa
+                                Versión 4.1.1
+================================================================================
+
+ÍNDICE
+------
+1. Introducción y Visión General
+2. Arquitectura del Sistema
+3. Patrones de Diseño Implementados
+4. Backend: FastAPI y Python
+5. Sistema RAG (Retrieval-Augmented Generation)
+6. Proveedores de Inteligencia Artificial
+7. Base de Datos y Almacenamiento Vectorial
+8. Sistema de Caché con Redis
+9. Procesamiento Asíncrono con Celery
+10. Frontend: Next.js y React
+11. Sistema de Autenticación y Seguridad
+12. Editor LaTeX con Monaco
+13. Contenedorización con Docker
+14. Testing y Calidad de Código
+15. Métricas y Observabilidad
+16. Glosario de Términos Técnicos
+
+================================================================================
+1. INTRODUCCIÓN Y VISIÓN GENERAL
+================================================================================
+
+1.1 ¿QUÉ ES ESTE SISTEMA?
+-------------------------
+Este sistema es un chatbot académico inteligente que permite a los usuarios:
+- Subir documentos (PDF, Word, TXT, PowerPoint)
+- Hacer preguntas sobre el contenido de esos documentos
+- Recibir respuestas generadas por IA basadas en el contenido real
+- Editar documentos LaTeX con asistencia de IA
+
+1.2 PROBLEMA QUE RESUELVE
+-------------------------
+Los estudiantes e investigadores a menudo tienen grandes cantidades de documentos
+que necesitan consultar. Leer todo manualmente es ineficiente. Este sistema:
+- Indexa automáticamente el contenido de los documentos
+- Permite consultas en lenguaje natural
+- Genera respuestas citando las fuentes originales
+- Asiste en la redacción de documentos académicos
+
+1.3 TECNOLOGÍAS PRINCIPALES
+---------------------------
+BACKEND:
+- Python 3.11+
+- FastAPI (framework web asíncrono)
+- SQLAlchemy (ORM para base de datos)
+- Celery (procesamiento en segundo plano)
+
+FRONTEND:
+- Next.js 15 (framework React)
+- React 19
+- TypeScript
+- Tailwind CSS
+
+INFRAESTRUCTURA:
+- Docker (contenedorización)
+- PostgreSQL + pgvector (base de datos vectorial)
+- Redis (caché y cola de mensajes)
+- Ollama (modelos de IA locales)
+
+================================================================================
+2. ARQUITECTURA DEL SISTEMA
+================================================================================
+
+2.1 ARQUITECTURA DE MICROSERVICIOS
+----------------------------------
+El sistema sigue una arquitectura de microservicios donde cada componente
+es independiente y se comunica a través de APIs y colas de mensajes.
+
+DIAGRAMA DE ARQUITECTURA:
+
+┌─────────────────────────────────────────────────────────────┐
+│                     FRONTEND (Puerto 3000)                  │
+│                         Next.js 15                          │
+│   ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐    │
+│   │    Chat     │  │   Copilot   │  │      Admin      │    │
+│   │   Layout    │  │   Editor    │  │     Panel       │    │
+│   └─────────────┘  └─────────────┘  └─────────────────┘    │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ HTTP / Server-Sent Events
+┌───────────────────────────▼─────────────────────────────────┐
+│                     BACKEND (Puerto 8000)                   │
+│                         FastAPI                             │
+│   ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────────┐   │
+│   │  Auth   │  │  Chat   │  │  Docs   │  │   Admin     │   │
+│   │ Router  │  │ Router  │  │ Router  │  │   Router    │   │
+│   └────┬────┘  └────┬────┘  └────┬────┘  └──────┬──────┘   │
+│        └────────────┴────────────┴──────────────┘          │
+│                         │                                   │
+│   ┌─────────────────────▼─────────────────────────────┐    │
+│   │                  SERVICIOS                         │    │
+│   │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ │    │
+│   │  │ AI Prov. │  │  Search  │  │    Embeddings    │ │    │
+│   │  │ Manager  │  │  Engine  │  │     (Cached)     │ │    │
+│   │  └──────────┘  └──────────┘  └──────────────────┘ │    │
+│   └───────────────────────────────────────────────────┘    │
+└───────┬────────────┬────────────┬─────────────┬────────────┘
+        │            │            │             │
+   ┌────▼────┐  ┌────▼────┐  ┌────▼────┐  ┌────▼────┐
+   │   DB    │  │  Redis  │  │ Celery  │  │ Ollama  │
+   │  5432   │  │  6379   │  │ Worker  │  │  11434  │
+   └─────────┘  └─────────┘  └─────────┘  └─────────┘
+   PostgreSQL     Cache        Async       LLM Local
+   + pgvector    + Queue       Tasks
+
+2.2 FLUJO DE DATOS
+------------------
+1. Usuario sube documento → Frontend envía a Backend
+2. Backend procesa documento → Celery (async) extrae texto
+3. Texto se divide en "chunks" → Se generan embeddings (vectores)
+4. Embeddings se almacenan en PostgreSQL + pgvector
+5. Usuario hace pregunta → Backend busca chunks relevantes
+6. Chunks relevantes + pregunta → IA genera respuesta
+7. Respuesta se envía al frontend en streaming
+
+2.3 SEPARACIÓN DE RESPONSABILIDADES
+-----------------------------------
+Cada capa tiene una responsabilidad específica:
+
+CAPA DE PRESENTACIÓN (Frontend):
+- Renderizado de UI
+- Manejo de estado local
+- Validación de formularios
+- Comunicación con API
+
+CAPA DE API (Routers):
+- Endpoints HTTP
+- Validación de requests
+- Autenticación/Autorización
+- Serialización de respuestas
+
+CAPA DE SERVICIOS:
+- Lógica de negocio
+- Orquestación de operaciones
+- Integración con proveedores externos
+
+CAPA DE DATOS:
+- Modelos ORM
+- Queries a base de datos
+- Caché
+
+================================================================================
+3. PATRONES DE DISEÑO IMPLEMENTADOS
+================================================================================
+
+3.1 PATRÓN STRATEGY (Proveedores de IA)
+---------------------------------------
+QUÉ ES: Permite definir una familia de algoritmos intercambiables.
+
+IMPLEMENTACIÓN:
+- Clase abstracta: AIProvider
+- Implementaciones concretas: GeminiProvider, OpenAIProvider, AnthropicProvider, LocalProvider
+
+BENEFICIO: Se puede cambiar el proveedor de IA sin modificar el código que lo usa.
+
+CÓDIGO (simplificado):
+```python
+class AIProvider(ABC):
+    @abstractmethod
+    def generate_stream(self, prompt, api_key, ...):
+        pass
+
+class GeminiProvider(AIProvider):
+    def generate_stream(self, prompt, api_key, ...):
+        # Implementación específica de Gemini
+
+class OpenAIProvider(AIProvider):
+    def generate_stream(self, prompt, api_key, ...):
+        # Implementación específica de OpenAI
+```
+
+3.2 PATRÓN REPOSITORY (Acceso a Datos)
+--------------------------------------
+QUÉ ES: Abstrae la lógica de acceso a datos del resto de la aplicación.
+
+IMPLEMENTACIÓN:
+- Modelos SQLAlchemy definen la estructura
+- Queries se encapsulan en funciones de servicio
+- El código de negocio no conoce detalles de SQL
+
+BENEFICIO: Facilita testing y cambio de base de datos.
+
+3.3 PATRÓN FACTORY (Creación de Objetos)
+----------------------------------------
+QUÉ ES: Centraliza la creación de objetos complejos.
+
+IMPLEMENTACIÓN:
+- AIProviderManager crea el proveedor correcto según el ID
+- get_db() crea sesiones de base de datos
+
+3.4 PATRÓN DECORATOR (Middleware)
+---------------------------------
+QUÉ ES: Añade funcionalidad a objetos sin modificarlos.
+
+IMPLEMENTACIÓN:
+- Rate limiting como middleware
+- Logging como decorador
+- Autenticación como dependencia
+
+3.5 PATRÓN OBSERVER (Eventos)
+-----------------------------
+QUÉ ES: Objetos notifican cambios a otros objetos interesados.
+
+IMPLEMENTACIÓN:
+- WebSocket para notificaciones en tiempo real
+- Redis Pub/Sub para comunicación entre servicios
+
+3.6 PATRÓN SINGLETON (Instancias Únicas)
+----------------------------------------
+QUÉ ES: Garantiza una única instancia de una clase.
+
+IMPLEMENTACIÓN:
+- SearchEngine: una sola instancia con modelo CrossEncoder cargado
+- Redis connection pool
+
+================================================================================
+4. BACKEND: FASTAPI Y PYTHON
+================================================================================
+
+4.1 ¿POR QUÉ FASTAPI?
+---------------------
+FastAPI es un framework web moderno para Python con:
+- ALTO RENDIMIENTO: Basado en Starlette (async), comparable a Node.js
+- TIPADO: Usa type hints de Python para validación automática
+- DOCUMENTACIÓN: Genera OpenAPI/Swagger automáticamente
+- ASYNC NATIVO: Soporta async/await para operaciones I/O
+
+4.2 ESTRUCTURA DEL BACKEND
+--------------------------
+backend/
+├── app/
+│   ├── main.py              # Punto de entrada, configuración de app
+│   ├── routers/             # Endpoints organizados por recurso
+│   │   ├── auth.py          # Login, registro, tokens
+│   │   ├── chat.py          # Búsqueda y respuestas IA
+│   │   ├── documents.py     # CRUD de documentos
+│   │   ├── admin.py         # Operaciones administrativas
+│   │   └── providers.py     # Listado de proveedores IA
+│   ├── dependencies.py      # Inyección de dependencias
+│   ├── metrics.py           # Métricas Prometheus
+│   └── rate_limiter.py      # Límites de peticiones
+├── services/
+│   ├── ai_providers.py      # Abstracción de proveedores IA
+│   ├── search_engine.py     # Motor de búsqueda RAG
+│   ├── embedding_system.py  # Generación de embeddings
+│   ├── auth_service.py      # Lógica de autenticación
+│   ├── audit_service.py     # Registro de auditoría
+│   └── pdf_processor.py     # Extracción de texto
+├── database/
+│   ├── connection.py        # Configuración de conexión
+│   └── models.py            # Modelos ORM
+└── utils/
+    └── encryption.py        # Encriptación de API keys
+
+4.3 INYECCIÓN DE DEPENDENCIAS
+-----------------------------
+FastAPI usa un sistema de inyección de dependencias que permite:
+- Compartir recursos entre endpoints
+- Testing más fácil (se pueden inyectar mocks)
+- Código más limpio y modular
+
+EJEMPLO:
+```python
+@router.get("/documents")
+async def get_documents(
+    db: Session = Depends(get_db),  # Inyecta sesión de DB
+    user: User = Depends(get_current_user)  # Inyecta usuario autenticado
+):
+    return db.query(Document).filter(Document.owner_id == user.id).all()
+```
+
+4.4 MANEJO DE ERRORES
+---------------------
+Se implementa un sistema centralizado de excepciones:
+- Excepciones personalizadas por tipo de error
+- Handler global que convierte excepciones a respuestas HTTP
+- Logging estructurado de errores
+
+================================================================================
+5. SISTEMA RAG (RETRIEVAL-AUGMENTED GENERATION)
+================================================================================
+
+5.1 ¿QUÉ ES RAG?
+----------------
+RAG es una técnica que combina:
+- RETRIEVAL: Buscar información relevante en una base de conocimiento
+- AUGMENTED: Usar esa información para enriquecer el prompt
+- GENERATION: Generar una respuesta usando un modelo de lenguaje
+
+VENTAJAS SOBRE LLM PURO:
+- Respuestas basadas en datos reales (no inventados)
+- Fuentes verificables y citables
+- Conocimiento actualizado (no limitado al entrenamiento del modelo)
+
+5.2 PIPELINE RAG IMPLEMENTADO
+-----------------------------
+
+PASO 1: INGESTA DE DOCUMENTOS
+-----------------------------
+1. Usuario sube archivo (PDF, DOCX, TXT, PPTX)
+2. Se extrae el texto plano usando librerías especializadas:
+   - PDF: PyPDF2
+   - Word: python-docx
+   - PowerPoint: python-pptx
+
+PASO 2: CHUNKING (DIVISIÓN EN FRAGMENTOS)
+-----------------------------------------
+El texto se divide en fragmentos manejables porque:
+- Los modelos tienen límite de contexto
+- Fragmentos pequeños son más precisos para búsqueda
+
+CONFIGURACIÓN:
+- Tamaño de chunk: ~500 caracteres
+- Overlap (solapamiento): ~100 caracteres
+
+¿POR QUÉ OVERLAP?
+Para no cortar ideas a la mitad. El solapamiento garantiza que una oración
+que empieza en un chunk continúe en el siguiente.
+
+PASO 3: GENERACIÓN DE EMBEDDINGS
+--------------------------------
+¿QUÉ ES UN EMBEDDING?
+Es una representación numérica (vector) del significado semántico del texto.
+
+MODELO USADO: all-MiniLM-L6-v2
+- Dimensión: 384
+- Tamaño: ~80MB
+- Velocidad: Muy rápido
+
+CÓMO FUNCIONA:
+"El perro corre en el parque" → [0.123, -0.456, 0.789, ..., 0.012] (384 números)
+
+Textos con significado similar tienen vectores similares (distancia coseno baja).
+
+PASO 4: ALMACENAMIENTO EN BASE DE DATOS VECTORIAL
+-------------------------------------------------
+Los embeddings se almacenan en PostgreSQL con la extensión pgvector.
+
+¿QUÉ ES PGVECTOR?
+Es una extensión de PostgreSQL que permite:
+- Almacenar vectores como tipo de datos nativo
+- Realizar búsquedas de similitud eficientes
+- Usar índices especializados (IVFFlat)
+
+PASO 5: BÚSQUEDA HÍBRIDA
+------------------------
+Cuando el usuario hace una pregunta, se realizan DOS búsquedas:
+
+BÚSQUEDA SEMÁNTICA (VECTOR):
+- Se genera embedding de la pregunta
+- Se buscan los vectores más cercanos
+- Encuentra: "similar en significado"
+
+BÚSQUEDA POR PALABRAS CLAVE (TSVECTOR):
+- Se usa Full-Text Search de PostgreSQL
+- Se buscan coincidencias de términos
+- Encuentra: "exactamente estas palabras"
+
+¿POR QUÉ HÍBRIDA?
+- Semántica: entiende sinónimos y contexto
+- Keywords: encuentra términos técnicos exactos
+
+FUSIÓN DE RESULTADOS:
+- Se combinan ambos rankings
+- Se eliminan duplicados
+- Se normaliza la puntuación
+
+PASO 6: RE-RANKING CON CROSSENCODER
+-----------------------------------
+¿QUÉ ES UN CROSSENCODER?
+Es un modelo que evalúa directamente la relevancia entre una pregunta
+y un documento, considerando ambos juntos.
+
+BI-ENCODER (embeddings) vs CROSS-ENCODER:
+- Bi-encoder: Genera vectores por separado, compara después
+- Cross-encoder: Procesa pregunta+documento juntos, más preciso pero más lento
+
+MODELO USADO: ms-marco-MiniLM-L-6-v2
+
+PROCESO:
+1. Búsqueda inicial retorna 20 candidatos
+2. CrossEncoder evalúa cada par (pregunta, candidato)
+3. Se reordena por puntuación de CrossEncoder
+4. Se retornan los top 5
+
+PASO 7: GENERACIÓN DE RESPUESTA
+-------------------------------
+Los chunks relevantes se incluyen en el prompt de la IA:
+
+PROMPT TEMPLATE:
+```
+Eres un asistente académico. Responde basándote SOLO en el siguiente contexto.
+
+CONTEXTO:
+[Chunks relevantes aquí]
+
+PREGUNTA DEL USUARIO:
+[Pregunta aquí]
+
+INSTRUCCIONES:
+- Cita las fuentes usando [1], [2], etc.
+- Si no hay información suficiente, dilo claramente
+- Mantén un tono académico
+```
+
+================================================================================
+6. PROVEEDORES DE INTELIGENCIA ARTIFICIAL
+================================================================================
+
+6.1 ARQUITECTURA MULTI-PROVEEDOR
+--------------------------------
+El sistema soporta 4 proveedores de IA con una interfaz unificada:
+
+┌─────────────────────────────────────────────────┐
+│              AIProviderManager                   │
+├─────────────────────────────────────────────────┤
+│  get_provider(provider_id: str) -> AIProvider  │
+│  get_all_providers() -> List[AIProvider]        │
+└──────────────────────┬──────────────────────────┘
+                       │
+       ┌───────────────┼───────────────┐
+       ▼               ▼               ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│   Gemini     │ │   OpenAI     │ │  Anthropic   │ ...
+│   Provider   │ │   Provider   │ │   Provider   │
+└──────────────┘ └──────────────┘ └──────────────┘
+
+6.2 GOOGLE GEMINI
+-----------------
+MODELOS: gemini-2.5-flash, gemini-1.5-pro
+API: REST con streaming
+CARACTERÍSTICAS:
+- Contexto muy largo (hasta 1M tokens)
+- Bueno en código y razonamiento
+- Tier gratuito generoso
+
+6.3 OPENAI
+----------
+MODELOS: gpt-4o-mini, gpt-4o, gpt-4-turbo
+API: REST con streaming (SSE)
+CARACTERÍSTICAS:
+- Referencia de la industria
+- Muy bueno en instrucciones complejas
+- Pago por uso
+
+6.4 ANTHROPIC CLAUDE
+--------------------
+MODELOS: claude-3-5-sonnet, claude-3-haiku
+API: REST con streaming
+CARACTERÍSTICAS:
+- Muy bueno en análisis largo
+- Respuestas más seguras/alineadas
+- Contexto de 200K tokens
+
+6.5 OLLAMA (LOCAL)
+------------------
+MODELOS: llama3.2:3b, llama3.1:8b, mistral:7b
+API: REST local (puerto 11434)
+CARACTERÍSTICAS:
+- 100% privado (datos no salen del equipo)
+- Gratis (sin límites de API)
+- Requiere hardware potente
+
+6.6 STREAMING DE RESPUESTAS
+---------------------------
+Todas las respuestas se generan en streaming:
+
+¿QUÉ ES STREAMING?
+En lugar de esperar la respuesta completa, se envía token por token.
+
+TECNOLOGÍA: Server-Sent Events (SSE)
+- El servidor mantiene la conexión abierta
+- Envía datos conforme se generan
+- El frontend los muestra incrementalmente
+
+BENEFICIOS:
+- UX mejorada (respuesta aparece inmediatamente)
+- Timeout evitado (conexión activa)
+- Cancelación posible (el usuario puede parar)
+
+================================================================================
+7. BASE DE DATOS Y ALMACENAMIENTO VECTORIAL
+================================================================================
+
+7.1 POSTGRESQL
+--------------
+¿POR QUÉ POSTGRESQL?
+- Base de datos relacional madura y robusta
+- Extensible con tipos de datos personalizados
+- ACID compliant (transacciones seguras)
+- Bien soportado por SQLAlchemy
+
+7.2 PGVECTOR
+------------
+¿QUÉ ES?
+Es una extensión de PostgreSQL para almacenar y buscar vectores.
+
+INSTALACIÓN:
+```sql
+CREATE EXTENSION vector;
+```
+
+TIPO DE DATO:
+```sql
+embedding VECTOR(384)  -- Vector de 384 dimensiones
+```
+
+OPERACIONES:
+```sql
+-- Distancia coseno (más usado para embeddings)
+SELECT * FROM documents 
+ORDER BY embedding <=> query_vector  -- <=> es cosine distance
+LIMIT 5;
+```
+
+7.3 ÍNDICE IVFFLAT
+------------------
+¿QUÉ ES?
+Es un índice que acelera las búsquedas vectoriales.
+
+¿CÓMO FUNCIONA?
+1. Divide el espacio vectorial en clusters (listas)
+2. Al buscar, solo revisa los clusters más cercanos
+3. Trade-off: velocidad vs precisión
+
+CREACIÓN:
+```sql
+CREATE INDEX ON documents 
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
+```
+
+PARÁMETROS:
+- lists: Número de clusters (más = más preciso, más lento)
+- probes: Clusters a revisar en búsqueda (configurable en runtime)
+
+7.4 FULL-TEXT SEARCH
+--------------------
+PostgreSQL tiene búsqueda de texto completa nativa.
+
+TSVECTOR: Representa el documento como tokens normalizados
+TSQUERY: Representa la consulta de búsqueda
+
+EJEMPLO:
+```sql
+-- Crear columna de búsqueda
+search_vector TSVECTOR
+
+-- Buscar
+SELECT * FROM documents
+WHERE search_vector @@ to_tsquery('spanish', 'machine & learning')
+```
+
+7.5 MODELOS DE DATOS
+--------------------
+
+MODELO USER:
+- id (PK)
+- email (único, indexado)
+- hashed_password
+- gemini_api_key (encriptada)
+- ai_provider (gemini/openai/anthropic/local)
+- ai_model (opcional)
+- role (user/admin)
+- token_usage (contador)
+
+MODELO DOCUMENT:
+- id (PK)
+- content (texto del chunk)
+- chunk_metadata (JSON: source_file, page, etc.)
+- embedding (VECTOR 384)
+- search_vector (TSVECTOR)
+- owner_id (FK → User)
+
+MODELO REFRESH_TOKEN:
+- id (PK)
+- user_id (FK → User)
+- token_hash (solo hash, nunca plaintext)
+- family_id (para tracking de rotación)
+- expires_at
+- is_revoked
+
+MODELO ACTIVITY_LOG:
+- id (PK)
+- user_id (FK, nullable para acciones sistema)
+- action (login, upload, etc.)
+- details (JSON)
+- ip_address
+- timestamp
+
+================================================================================
+8. SISTEMA DE CACHÉ CON REDIS
+================================================================================
+
+8.1 ¿QUÉ ES REDIS?
+------------------
+Redis es un almacén de datos en memoria, usado como:
+- Caché (datos leídos frecuentemente)
+- Message broker (cola de mensajes para Celery)
+- Pub/Sub (notificaciones en tiempo real)
+
+8.2 CACHÉ DE DOS NIVELES
+------------------------
+NIVEL 1: LRU en Memoria (Python)
+- Más rápido (sin I/O de red)
+- Limitado por RAM del proceso
+- Se pierde al reiniciar
+
+NIVEL 2: Redis
+- Persiste entre reinicios
+- Compartido entre workers
+- Más lento que memoria local
+
+FLUJO DE CACHÉ:
+```
+1. Buscar en LRU local
+   → Si encontrado: retornar
+2. Buscar en Redis
+   → Si encontrado: guardar en LRU local, retornar
+3. Calcular valor (embedding, búsqueda, etc.)
+4. Guardar en Redis
+5. Guardar en LRU local
+6. Retornar
+```
+
+8.3 ¿QUÉ SE CACHEA?
+-------------------
+- Embeddings de queries frecuentes
+- Resultados de búsqueda
+- Configuración de usuarios
+
+8.4 INVALIDACIÓN
+----------------
+- TTL (Time To Live) automático
+- Invalidación manual al modificar datos
+- Versionado de claves para updates
+
+================================================================================
+9. PROCESAMIENTO ASÍNCRONO CON CELERY
+================================================================================
+
+9.1 ¿QUÉ ES CELERY?
+-------------------
+Celery es una cola de tareas distribuida para Python.
+Permite ejecutar tareas en segundo plano sin bloquear la API.
+
+9.2 ¿POR QUÉ ES NECESARIO?
+--------------------------
+Procesar un documento PDF puede tomar 30+ segundos:
+- Extraer texto
+- Dividir en chunks
+- Generar embeddings
+- Guardar en base de datos
+
+Sin Celery: El usuario espera bloqueado 30 segundos
+Con Celery: La API responde inmediatamente, proceso en background
+
+9.3 ARQUITECTURA
+----------------
+```
+[Usuario] → [API] → [Redis Queue] → [Celery Worker] → [Database]
+              ↓                            ↓
+         Respuesta                    Notificación
+         inmediata                    vía WebSocket
+```
+
+9.4 TAREAS IMPLEMENTADAS
+------------------------
+- process_document: Extracción y embedding de documentos
+- cleanup_expired_tokens: Limpieza de tokens expirados
+
+9.5 BROKER Y BACKEND
+--------------------
+BROKER: Redis (cola de tareas pendientes)
+BACKEND: Redis (resultados de tareas)
+
+================================================================================
+10. FRONTEND: NEXT.JS Y REACT
+================================================================================
+
+10.1 ¿QUÉ ES NEXT.JS?
+---------------------
+Next.js es un framework de React que añade:
+- Server-Side Rendering (SSR)
+- Static Site Generation (SSG)
+- Routing basado en archivos
+- API Routes
+- Optimización automática
+
+10.2 ¿POR QUÉ NEXT.JS 15?
+-------------------------
+- App Router (estructura moderna)
+- React Server Components
+- Turbopack (bundler más rápido)
+- Mejor rendimiento
+
+10.3 ESTRUCTURA DEL FRONTEND
+----------------------------
+frontend-react/
+├── src/
+│   ├── app/                    # Páginas (App Router)
+│   │   ├── page.tsx            # Página principal
+│   │   ├── layout.tsx          # Layout global
+│   │   └── globals.css         # Estilos globales
+│   ├── components/
+│   │   ├── chat/               # Componentes de chat
+│   │   │   ├── chat-layout.tsx
+│   │   │   ├── chat-messages.tsx
+│   │   │   ├── chat-input.tsx
+│   │   │   └── mermaid-diagram.tsx
+│   │   ├── copilot/            # Editor LaTeX
+│   │   │   └── copilot-editor.tsx
+│   │   └── ui/                 # Componentes base (Shadcn)
+│   ├── lib/
+│   │   ├── api-client.ts       # Cliente HTTP
+│   │   ├── schemas.ts          # Validación Zod
+│   │   └── hooks/              # Custom hooks
+│   └── context/
+│       └── auth-context.tsx    # Estado de autenticación
+└── public/                     # Assets estáticos
+
+10.4 COMPONENTES UI (SHADCN)
+----------------------------
+Shadcn/ui es una colección de componentes:
+- Construidos sobre Radix UI (accesibilidad)
+- Estilizados con Tailwind CSS
+- Copiados al proyecto (no instalados como dependencia)
+
+COMPONENTES USADOS:
+- Button, Input, Dialog, Dropdown
+- Toast (notificaciones)
+- Accordion, Tabs
+- ScrollArea, Progress
+
+10.5 VALIDACIÓN CON ZOD
+-----------------------
+Zod es una librería de validación de esquemas TypeScript-first.
+
+EJEMPLO:
+```typescript
+const ChatMessageSchema = z.object({
+  role: z.enum(['user', 'ai']),
+  content: z.string().min(1),
+  source: z.string().nullable().optional()
+});
+
+// Uso
+const message = ChatMessageSchema.parse(data); // Lanza error si inválido
+```
+
+10.6 CLIENTE API CON RETRY
+--------------------------
+El api-client.ts implementa:
+- Retry automático con backoff exponencial
+- Refresh token automático en 401
+- Manejo centralizado de errores
+
+BACKOFF EXPONENCIAL:
+Intento 1: esperar 1s
+Intento 2: esperar 2s
+Intento 3: esperar 4s
+...con jitter (variación aleatoria) para evitar thundering herd
+
+================================================================================
+11. SISTEMA DE AUTENTICACIÓN Y SEGURIDAD
+================================================================================
+
+11.1 FLUJO DE AUTENTICACIÓN
+---------------------------
+```
+[Login] → [Backend valida credenciales]
+             ↓
+[Genera Access Token (30 min) + Refresh Token (7 días)]
+             ↓
+[Frontend almacena tokens]
+             ↓
+[Cada request incluye Access Token en header]
+             ↓
+[Al expirar Access Token, usa Refresh Token para obtener nuevo par]
+```
+
+11.2 JWT (JSON WEB TOKENS)
+--------------------------
+¿QUÉ ES UN JWT?
+Es un token que contiene información codificada y firmada.
+
+ESTRUCTURA:
+```
+header.payload.signature
+
+Header: {"alg": "HS256", "typ": "JWT"}
+Payload: {"sub": "user@email.com", "exp": 1702648800, ...}
+Signature: HMAC-SHA256(header + payload, secret_key)
+```
+
+CONTENIDO DEL PAYLOAD:
+- sub: identificador del usuario (email)
+- exp: timestamp de expiración
+- role: rol del usuario
+
+11.3 REFRESH TOKENS
+-------------------
+¿POR QUÉ REFRESH TOKENS?
+- Access tokens cortos (30 min) limitan el daño si se roban
+- Refresh tokens largos (7 días) evitan re-login frecuente
+- Rotación: cada uso del refresh token genera uno nuevo
+
+SEGURIDAD:
+- Token NUNCA se almacena en plaintext (solo hash SHA-256)
+- Family tracking: si un token se reusa, toda la familia se revoca
+- Permite "logout everywhere"
+
+11.4 ENCRIPTACIÓN DE API KEYS
+-----------------------------
+Las API keys de los usuarios se encriptan antes de guardar:
+
+ALGORITMO: Fernet (simétrico)
+- Basado en AES-128-CBC
+- Incluye HMAC para integridad
+- Key derivada con PBKDF2 (480,000 iteraciones)
+
+FLUJO:
+```
+API Key del usuario → Fernet.encrypt() → Texto encriptado → Base de datos
+Base de datos → Texto encriptado → Fernet.decrypt() → API Key original
+```
+
+11.5 RATE LIMITING
+------------------
+Limita peticiones por usuario/IP para prevenir abuso.
+
+LÍMITES POR ROL:
+- Anónimo: 30 req/min
+- Usuario autenticado: 100 req/min
+- Administrador: 1000 req/min
+
+IMPLEMENTACIÓN: SlowAPI (basado en limits)
+
+11.6 SECURITY HEADERS
+---------------------
+Middleware que añade headers de seguridad:
+- X-Content-Type-Options: nosniff
+- X-Frame-Options: DENY
+- Content-Security-Policy
+- Strict-Transport-Security (HSTS)
+
+11.7 AUDITORÍA
+--------------
+Se registran todas las acciones sensibles:
+- Login exitoso/fallido
+- Cambios de contraseña
+- Cambios de API key
+- Operaciones administrativas
+- Eliminación de documentos
+
+================================================================================
+12. EDITOR LATEX CON MONACO
+================================================================================
+
+12.1 ¿QUÉ ES MONACO EDITOR?
+---------------------------
+Monaco es el editor que usa VS Code, disponible como componente web.
+
+CARACTERÍSTICAS:
+- Syntax highlighting para 50+ lenguajes
+- Autocompletado inteligente
+- Búsqueda y reemplazo con regex
+- Múltiples cursores
+- Minimap
+
+12.2 INTEGRACIÓN EN REACT
+-------------------------
+Se usa @monaco-editor/react para integrar Monaco en el proyecto.
+
+CONFIGURACIÓN:
+```typescript
+<Editor
+  height="100%"
+  defaultLanguage="latex"
+  theme="vs-dark"
+  value={text}
+  onChange={(value) => setText(value)}
+  onMount={handleEditorDidMount}
+  options={{
+    minimap: { enabled: false },
+    fontSize: 14,
+    wordWrap: 'on',
+    automaticLayout: true,
+  }}
+/>
+```
+
+12.3 AUTOCOMPLETADO LATEX
+-------------------------
+Se registran 80+ snippets de comandos LaTeX:
+
+EJEMPLO DE SNIPPET:
+```typescript
+{
+  label: '\\begin{equation}',
+  insertText: '\\begin{equation}\n\t${1:contenido}\n\\end{equation}',
+  documentation: 'Crea un entorno de ecuación numerada'
+}
+```
+
+12.4 ACCIONES CONTEXTUALES
+--------------------------
+Al hacer clic derecho sobre texto seleccionado:
+- ✨ Mejorar Redacción (Académico)
+- 🇺🇸 Traducir a Inglés
+- 🔧 Corregir Código LaTeX
+- 📝 Resumir Sección
+- 📚 Expandir Párrafo
+
+Cada acción envía el texto + instrucción a la IA y reemplaza la selección.
+
+12.5 COMPILACIÓN PDF
+--------------------
+El texto LaTeX se envía al backend, que usa un servicio de compilación
+para generar el PDF. El PDF se muestra usando react-pdf.
+
+================================================================================
+13. CONTENEDORIZACIÓN CON DOCKER
+================================================================================
+
+13.1 ¿QUÉ ES DOCKER?
+--------------------
+Docker empaqueta aplicaciones en "contenedores" que incluyen:
+- Código de la aplicación
+- Dependencias
+- Configuración del sistema operativo
+- Variables de entorno
+
+BENEFICIO: "Works on my machine" → "Works everywhere"
+
+13.2 DOCKER COMPOSE
+-------------------
+Docker Compose orquesta múltiples contenedores como un sistema.
+
+SERVICIOS DEFINIDOS:
+```yaml
+services:
+  db:         # PostgreSQL + pgvector
+  cache:      # Redis
+  backend:    # FastAPI
+  frontend:   # Next.js
+  celery_worker:  # Procesamiento async
+  ollama:     # Modelos IA locales
+```
+
+13.3 HEALTH CHECKS
+------------------
+Cada servicio define cómo verificar que está funcionando:
+
+```yaml
+healthcheck:
+  test: ["CMD", "pg_isready", "-U", "admin"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+```
+
+13.4 DEPENDENCIAS ENTRE SERVICIOS
+---------------------------------
+```yaml
+backend:
+  depends_on:
+    db:
+      condition: service_healthy
+    cache:
+      condition: service_healthy
+```
+
+Esto garantiza que el backend no inicie hasta que DB y Redis estén listos.
+
+13.5 VOLÚMENES
+--------------
+Datos persistentes que sobreviven reinicios:
+- postgres_data: Base de datos
+- redis_data: Caché persistente
+- ollama_data: Modelos descargados
+
+13.6 NETWORKING
+---------------
+Todos los servicios comparten una red interna (chatbot_network).
+Pueden comunicarse por nombre de servicio (ej: db:5432).
+
+================================================================================
+14. TESTING Y CALIDAD DE CÓDIGO
+================================================================================
+
+14.1 TESTING EN BACKEND (PYTEST)
+--------------------------------
+8 archivos de test con 60+ tests:
+
+test_ai_providers.py:
+- Verifica cada proveedor genera respuestas
+- Verifica streaming funciona
+- Verifica manejo de errores de API
+
+test_search_engine.py:
+- Verifica búsqueda semántica
+- Verifica búsqueda por keywords
+- Verifica fusión de resultados
+- Verifica re-ranking
+
+test_auth.py:
+- Verifica registro de usuarios
+- Verifica login/logout
+- Verifica tokens JWT
+- Verifica refresh token rotation
+
+test_encryption.py:
+- Verifica encriptación/desencriptación de API keys
+- Verifica detección de datos encriptados
+- Verifica manejo de keys inválidas
+
+test_audit_service.py:
+- Verifica registro de acciones
+- Verifica filtrado por usuario/acción
+- Verifica paginación
+
+14.2 TESTING EN FRONTEND (JEST)
+-------------------------------
+Tests unitarios para componentes React.
+
+EJEMPLO:
+```typescript
+describe('ChatInput', () => {
+  it('should submit message on Enter', () => {
+    const onSubmit = jest.fn();
+    render(<ChatInput onSubmit={onSubmit} />);
+    
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'Hello' }
+    });
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
+    
+    expect(onSubmit).toHaveBeenCalledWith('Hello');
+  });
+});
+```
+
+14.3 EJECUTAR TESTS
+-------------------
+Backend:
+```bash
+cd backend
+pytest tests/ -v
+```
+
+Frontend:
+```bash
+cd frontend-react
+npm test
+```
+
+================================================================================
+15. MÉTRICAS Y OBSERVABILIDAD
+================================================================================
+
+15.1 PROMETHEUS METRICS
+-----------------------
+Se exponen métricas en formato Prometheus:
+
+ENDPOINT: GET /metrics
+
+MÉTRICAS DISPONIBLES:
+- chatbot_requests_total: Total de requests por endpoint
+- chatbot_request_duration_seconds: Latencia (histograma)
+- chatbot_ai_requests_total: Requests a proveedores IA
+- chatbot_ai_tokens_total: Tokens consumidos
+- chatbot_documents_processed_total: Documentos procesados
+- chatbot_cache_operations_total: Hits/misses de caché
+
+15.2 LOGGING ESTRUCTURADO
+-------------------------
+Los logs usan formato JSON en producción:
+
+```json
+{
+  "timestamp": "2024-12-15T10:30:45.123Z",
+  "level": "INFO",
+  "logger": "services.search_engine",
+  "message": "Search completed",
+  "query": "machine learning",
+  "results_count": 5,
+  "duration_ms": 234
+}
+```
+
+15.3 HEALTH CHECK
+-----------------
+ENDPOINT: GET /health
+
+RESPUESTA:
+```json
+{
+  "status": "healthy",
+  "version": "4.1.1"
+}
+```
+
+================================================================================
+16. GLOSARIO DE TÉRMINOS TÉCNICOS
+================================================================================
+
+API (Application Programming Interface):
+Conjunto de definiciones y protocolos para comunicación entre software.
+
+Async/Await:
+Sintaxis para programación asíncrona que permite esperar operaciones sin bloquear.
+
+Bearer Token:
+Tipo de autenticación donde el token se envía en el header Authorization.
+
+CORS (Cross-Origin Resource Sharing):
+Mecanismo de seguridad que permite peticiones entre diferentes dominios.
+
+Embedding:
+Representación vectorial numérica del significado semántico de un texto.
+
+FastAPI:
+Framework web moderno para Python, basado en type hints y alto rendimiento.
+
+Fernet:
+Esquema de encriptación simétrica que garantiza confidencialidad e integridad.
+
+IVFFlat:
+Tipo de índice para búsqueda vectorial que agrupa vectores en clusters.
+
+JWT (JSON Web Token):
+Estándar para tokens de autenticación que contienen información codificada.
+
+Middleware:
+Código que se ejecuta entre la recepción de una petición y su procesamiento.
+
+ORM (Object-Relational Mapping):
+Técnica que permite interactuar con bases de datos usando objetos.
+
+Pub/Sub (Publish/Subscribe):
+Patrón de mensajería donde emisores y receptores no se conocen directamente.
+
+RAG (Retrieval-Augmented Generation):
+Técnica que combina búsqueda de información con generación de texto por IA.
+
+Rate Limiting:
+Limitación del número de peticiones que un cliente puede hacer en un tiempo.
+
+Redis:
+Almacén de datos en memoria usado como caché y message broker.
+
+REST (Representational State Transfer):
+Arquitectura para diseño de APIs web.
+
+SHA-256:
+Algoritmo de hash criptográfico que produce un digest de 256 bits.
+
+SQLAlchemy:
+Biblioteca Python para interactuar con bases de datos relacionales.
+
+SSE (Server-Sent Events):
+Tecnología para que el servidor envíe datos al cliente en tiempo real.
+
+Strategy Pattern:
+Patrón de diseño que permite seleccionar algoritmos en tiempo de ejecución.
+
+TSVECTOR:
+Tipo de dato de PostgreSQL para búsqueda de texto completo.
+
+TypeScript:
+Superset de JavaScript que añade tipado estático.
+
+Vector Database:
+Base de datos optimizada para almacenar y buscar vectores numéricos.
+
+WebSocket:
+Protocolo de comunicación bidireccional en tiempo real sobre TCP.
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
+
+Documento preparado para defensa de tesis.
+Versión: 4.1.1
+Fecha: Diciembre 2024
+
+Para consultas adicionales sobre cualquier aspecto técnico, referirse al código
+fuente o a la documentación oficial de cada tecnología mencionada.
