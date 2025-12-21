@@ -24,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           defaultTheme="dark"
           enableSystem
           storageKey="theme"
+          themes={["light", "dark", "red", "high-contrast", "matrix", "vintage"]}
         >
           <AuthProvider>{children}</AuthProvider>
           <Toaster />

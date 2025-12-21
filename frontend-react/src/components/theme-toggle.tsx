@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Moon, Sun, Flame, Eye, Code, Clock, GraduationCap } from "lucide-react"
+import { Moon, Sun, Flame, Eye, Code, Clock } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import { Button } from "@/components/ui/button"
@@ -52,10 +52,6 @@ export function ModeToggle() {
         <DropdownMenuItem onClick={() => setTheme("vintage")}>
           <Clock className="mr-2 h-4 w-4 text-amber-600" />
           Vintage
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("academic")}>
-          <GraduationCap className="mr-2 h-4 w-4 text-blue-500" />
-          Academic
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

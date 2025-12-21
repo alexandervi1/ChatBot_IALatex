@@ -94,53 +94,11 @@
   --radius: 0.75rem;
 }
 
-/* Theme: Academic - Harvard Institutional Style */
-.academic {
-  --background: oklch(0.12 0.02 240);
-  --foreground: oklch(0.95 0.01 240);
-  --card: oklch(0.16 0.025 240);
-  --card-foreground: oklch(0.95 0.01 240);
-  --popover: oklch(0.14 0.02 240);
-  --popover-foreground: oklch(0.95 0.01 240);
-  /* Harvard Crimson inspired primary with blue academic tone */
-  --primary: oklch(0.55 0.18 250);
-  --primary-foreground: oklch(0.98 0.01 240);
-  --secondary: oklch(0.22 0.03 240);
-  --secondary-foreground: oklch(0.95 0.01 240);
-  --muted: oklch(0.22 0.025 240);
-  --muted-foreground: oklch(0.7 0.02 240);
-  /* Gold accent for prestige */
-  --accent: oklch(0.72 0.16 85);
-  --accent-foreground: oklch(0.15 0.02 240);
-  --destructive: oklch(0.55 0.22 27);
-  --destructive-foreground: oklch(0.98 0.01 240);
-  --border: oklch(0.28 0.03 240);
-  --input: oklch(0.2 0.025 240);
-  --ring: oklch(0.55 0.18 250);
-  --radius: 0.5rem;
-  
-  /* Academic-specific variables */
-  --academic-gold: oklch(0.72 0.16 85);
-  --academic-blue: oklch(0.55 0.18 250);
-  --academic-navy: oklch(0.25 0.06 250);
-}
-
 /* Add subtle glow effects for themed buttons */
 .red .btn-primary,
 .matrix .btn-primary,
 .high-contrast .btn-primary {
   box-shadow: 0 0 12px -2px hsl(var(--primary) / 0.4);
-}
-
-/* Academic theme special effects */
-.academic .btn-primary,
-.academic button[data-variant="default"] {
-  box-shadow: 0 0 20px -4px oklch(0.55 0.18 250 / 0.5);
-  border: 1px solid oklch(0.72 0.16 85 / 0.3);
-}
-
-.academic .card {
-  border: 1px solid oklch(0.72 0.16 85 / 0.15);
 }
 
 /* Smooth transitions for theme changes */
