@@ -122,7 +122,6 @@ services:
       dockerfile: Dockerfile
       args:
         BUILDKIT_INLINE_CACHE: 1
-    image: chatbot-backend:latest
     container_name: chatbot_celery_worker
     command: celery -A celery_worker.celery_app worker --loglevel=info
     volumes:
