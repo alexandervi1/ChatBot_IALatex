@@ -433,7 +433,7 @@ El sistema soporta 4 proveedores de IA con una interfaz unificada:
 
 6.2 GOOGLE GEMINI
 -----------------
-MODELOS: gemini-2.5-flash, gemini-1.5-pro
+MODELOS: gemini-2.5-flash, gemini-2.5-pro
 API: REST con streaming
 CARACTERÍSTICAS:
 - Contexto muy largo (hasta 1M tokens)

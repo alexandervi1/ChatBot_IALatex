@@ -17,8 +17,8 @@ class SearchConfig:
 
 class LLMConfig:
     """Configuration for Language Model interactions."""
-    DEFAULT_MODEL: Final[str] = "gemini-1.5-flash"
-    FALLBACK_MODEL: Final[str] = "gemini-1.5-pro"
+    DEFAULT_MODEL: Final[str] = "gemini-2.5-flash"
+    FALLBACK_MODEL: Final[str] = "gemini-2.5-pro"
     DEFAULT_TEMPERATURE: Final[float] = 0.3
     MAX_TOKENS: Final[int] = 2048
     COPILOT_TEMPERATURE: Final[float] = 0.7

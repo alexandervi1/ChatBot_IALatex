@@ -260,7 +260,7 @@ El frontend estará disponible en [http://localhost:3000](http://localhost:3000)
 
 | Proveedor | Modelos Disponibles | ¿Necesita API Key? | Costo |
 |-----------|---------------------|-------------------|-------|
-| **Google Gemini** | gemini-2.5-flash, gemini-1.5-pro | ✅ [Obtener](https://aistudio.google.com/app/apikey) | Gratis con límites |
+| **Google Gemini** | gemini-2.5-flash, gemini-2.5-pro | ✅ [Obtener](https://aistudio.google.com/app/apikey) | Gratis con límites |
 | **OpenAI** | gpt-4o-mini, gpt-4o, gpt-4-turbo | ✅ [Obtener](https://platform.openai.com/api-keys) | Pago por uso |
 | **Anthropic Claude** | claude-3-5-sonnet, claude-3-haiku | ✅ [Obtener](https://console.anthropic.com/settings/keys) | Pago por uso |
 | **Local (Ollama)** | llama3.2:3b, llama3.1:8b, mistral:7b | ❌ | **Gratis** |
