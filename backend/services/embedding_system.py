@@ -39,7 +39,7 @@ class AdvancedEmbeddingSystem:
         """
         try:
             logger.info(f"Cargando el modelo de embeddings: '{model_name}'...")
-            self.model = SentenceTransformer(model_name)
+            self.model = SentenceTransformer(model_name, device='cpu')
             self.model_name = model_name
             logger.info("Modelo de embeddings cargado exitosamente.")
             
