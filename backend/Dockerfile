@@ -39,9 +39,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Estas capas se cachean y no se reconstruyen si no cambian
 # ============================================================================
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-    torch>=2.1.0 \
-    sentence-transformers>=2.2.2
+    pip install --no-cache-dir torch>=2.1.0 --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir sentence-transformers>=2.2.2
 
 # Paso 2: Copiar e instalar el resto de dependencias
 COPY ./requirements.txt /app/requirements.txt
@@ -80,6 +79,6 @@ USER appuser
 
 # Healthcheck usando curl
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/docs || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # El comando se especifica en docker-compose.yml

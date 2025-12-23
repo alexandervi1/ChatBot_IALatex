@@ -182,7 +182,7 @@ import type { ZodSchema } from 'zod';
  * @returns Validated and typed response data
  * @throws Error if response is not OK or validation fails
  */
-async function handleResponseWithValidation<T>(
+export async function handleResponseWithValidation<T>(
   response: Response,
   schema?: ZodSchema<T>,
   context?: string
@@ -456,6 +456,43 @@ export const getAnalytics = (): Promise<AnalyticsData> => {
   }).then(response => handleResponse<AnalyticsData>(response));
 };
 
+// --- Timeseries Analytics Types ---
+export interface TimeseriesData {
+  period: {
+    start: string;
+    end: string;
+    days: number;
+  };
+  activity_by_day: Array<{
+    date: string;
+    logins: number;
+    documents: number;
+    chats: number;
+  }>;
+  documents_by_type: Array<{
+    type: string;
+    count: number;
+    color: string;
+  }>;
+  users_growth: Array<{
+    date: string;
+    users: number;
+    new_users: number;
+  }>;
+  hourly_activity: Array<{
+    hour: number;
+    activity: number;
+  }>;
+}
+
+export const getAnalyticsTimeseries = (days: number = 7): Promise<TimeseriesData> => {
+  return fetch(`${API_BASE_URL}/admin/analytics/timeseries?days=${days}`, {
+    method: 'GET',
+    headers: getHeaders(),
+  }).then(response => handleResponse<TimeseriesData>(response));
+};
+
+
 export const getActivityLogs = (params?: {
   skip?: number;
   limit?: number;
@@ -495,6 +532,92 @@ export const deleteDocumentBySource = (ownerId: number, sourceFile: string): Pro
     method: 'DELETE',
     headers: getHeaders(),
   }).then(response => handleResponse<any>(response));
+};
+
+// --- System Alerts Types ---
+export interface SystemAlert {
+  id: string;
+  type: 'warning' | 'error' | 'info';
+  title: string;
+  message: string;
+  action: string;
+  priority: number;
+  timestamp: string;
+}
+
+export interface SystemAlertsResponse {
+  alerts: SystemAlert[];
+  count: number;
+  has_critical: boolean;
+  generated_at: string;
+}
+
+export const getSystemAlerts = (): Promise<SystemAlertsResponse> => {
+  return fetch(`${API_BASE_URL}/admin/alerts`, {
+    method: 'GET',
+    headers: getHeaders(),
+  }).then(response => handleResponse<SystemAlertsResponse>(response));
+};
+
+// --- System Configuration Types ---
+export interface SystemConfig {
+  rate_limits: {
+    anonymous: number;
+    user: number;
+    admin: number;
+  };
+  max_file_size_mb: number;
+  max_tokens_per_user: number;
+  allowed_providers: string[];
+  log_retention_days: number;
+  enable_analytics: boolean;
+  maintenance_mode: boolean;
+}
+
+export interface SystemConfigResponse {
+  config: SystemConfig;
+  last_updated: string;
+}
+
+export interface SystemHealthResponse {
+  status: 'healthy' | 'maintenance' | 'error';
+  system: {
+    cpu_percent: number;
+    memory_percent: number;
+    memory_used_gb: number;
+    memory_total_gb: number;
+    disk_percent: number;
+    disk_used_gb: number;
+    disk_total_gb: number;
+  };
+  database: {
+    total_users: number;
+    total_documents: number;
+    total_logs: number;
+  };
+  timestamp: string;
+}
+
+export const getSystemConfig = (): Promise<SystemConfigResponse> => {
+  return fetch(`${API_BASE_URL}/admin/config`, {
+    method: 'GET',
+    headers: getHeaders(),
+  }).then(response => handleResponse<SystemConfigResponse>(response));
+};
+
+export const updateSystemConfig = (config: Partial<SystemConfig>): Promise<{ message: string; config: SystemConfig }> => {
+  return fetch(`${API_BASE_URL}/admin/config`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(config),
+  }).then(response => handleResponse<{ message: string; config: SystemConfig }>(response));
+};
+
+export const getSystemHealth = (): Promise<SystemHealthResponse> => {
+  return fetch(`${API_BASE_URL}/admin/config/health`, {
+    method: 'GET',
+    headers: getHeaders(),
+  }).then(response => handleResponse<SystemHealthResponse>(response));
 };
 
 // --- Document Endpoints ---

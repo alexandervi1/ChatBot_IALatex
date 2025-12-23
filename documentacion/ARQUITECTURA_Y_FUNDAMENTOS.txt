@@ -62,7 +62,7 @@ INFRAESTRUCTURA:
 - Docker (contenedorización)
 - PostgreSQL + pgvector (base de datos vectorial)
 - Redis (caché y cola de mensajes)
-- Ollama (modelos de IA locales)
+
 
 ================================================================================
 2. ARQUITECTURA DEL SISTEMA
@@ -102,11 +102,11 @@ DIAGRAMA DE ARQUITECTURA:
 │   └───────────────────────────────────────────────────┘    │
 └───────┬────────────┬────────────┬─────────────┬────────────┘
         │            │            │             │
-   ┌────▼────┐  ┌────▼────┐  ┌────▼────┐  ┌────▼────┐
-   │   DB    │  │  Redis  │  │ Celery  │  │ Ollama  │
-   │  5432   │  │  6379   │  │ Worker  │  │  11434  │
-   └─────────┘  └─────────┘  └─────────┘  └─────────┘
-   PostgreSQL     Cache        Async       LLM Local
+   ┌────▼────┐  ┌────▼────┐  ┌────▼────┐
+   │   DB    │  │  Redis  │  │ Celery  │
+   │  5432   │  │  6379   │  │ Worker  │
+   └─────────┘  └─────────┘  └─────────┘
+   PostgreSQL     Cache        Async
    + pgvector    + Queue       Tasks
 
 2.2 FLUJO DE DATOS
@@ -155,7 +155,7 @@ QUÉ ES: Permite definir una familia de algoritmos intercambiables.
 
 IMPLEMENTACIÓN:
 - Clase abstracta: AIProvider
-- Implementaciones concretas: GeminiProvider, OpenAIProvider, AnthropicProvider, LocalProvider
+- Implementaciones concretas: GeminiProvider, OpenAIProvider, AnthropicProvider
 
 BENEFICIO: Se puede cambiar el proveedor de IA sin modificar el código que lo usa.
 
@@ -458,14 +458,8 @@ CARACTERÍSTICAS:
 - Respuestas más seguras/alineadas
 - Contexto de 200K tokens
 
-6.5 OLLAMA (LOCAL)
-------------------
-MODELOS: llama3.2:3b, llama3.1:8b, mistral:7b
-API: REST local (puerto 11434)
-CARACTERÍSTICAS:
-- 100% privado (datos no salen del equipo)
-- Gratis (sin límites de API)
-- Requiere hardware potente
+
+
 
 6.6 STREAMING DE RESPUESTAS
 ---------------------------
@@ -951,7 +945,7 @@ services:
   backend:    # FastAPI
   frontend:   # Next.js
   celery_worker:  # Procesamiento async
-  ollama:     # Modelos IA locales
+
 ```
 
 13.3 HEALTH CHECKS
@@ -984,7 +978,7 @@ Esto garantiza que el backend no inicie hasta que DB y Redis estén listos.
 Datos persistentes que sobreviven reinicios:
 - postgres_data: Base de datos
 - redis_data: Caché persistente
-- ollama_data: Modelos descargados
+
 
 13.6 NETWORKING
 ---------------

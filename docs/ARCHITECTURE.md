@@ -50,7 +50,6 @@ package "Data & Storage" {
 
 package "External / AI Layer" {
     cloud "Google Gemini API" as Gemini
-    component "Ollama (Local)" as Ollama
 }
 
 ' Relaciones
@@ -66,7 +65,7 @@ API --> Audit : Log Action
 Search --> DB : Vector Similarity Search
 Search --> Cache : Check/Set Embeddings
 Search --> Gemini : Generate Answer
-Search --> Ollama : Generate Answer (Local)
+
 
 Worker ..> DB : Async Tasks (PDF Processing)
 
@@ -90,7 +89,7 @@ participant "API Endpoint" as API
 participant "Search Engine" as Engine
 participant "Vector DB" as DB
 participant "Cross Encoder" as ReRanker
-participant "LLM (Gemini/Ollama)" as AI
+participant "LLM (Gemini/OpenAI)" as AI
 
 Usuario -> API: POST /chat/message\n{query: "¿Qué es IA?"}
 activate API

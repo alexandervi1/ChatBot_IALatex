@@ -177,7 +177,7 @@ export function withErrorBoundary<P extends object>(
  * Lightweight Error Fallback component for use with ErrorBoundary
  */
 export function ErrorFallback({
-    error,
+    error: _error,
     resetError,
     title = 'Error',
     description = 'Ha ocurrido un error inesperado.',

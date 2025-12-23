@@ -9,14 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/lib/hooks/use-toast";
-import { Trash2, Edit, Shield, Key, Lock, UserCog, RefreshCw, BarChart3, ScrollText, FileStack } from 'lucide-react';
+import { Trash2, Edit, Shield, Key, Lock, UserCog, RefreshCw, BarChart3, ScrollText, FileStack, Settings2 } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-    DialogFooter,
     DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -28,6 +27,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminDashboard } from '@/components/admin/AdminDashboard';
 import { ActivityLogsTable } from '@/components/admin/ActivityLogsTable';
 import { DocumentsManagementTable } from '@/components/admin/DocumentsManagementTable';
+import { SystemAlertsPanel } from '@/components/admin/SystemAlertsPanel';
+import { SystemConfigPanel } from '@/components/admin/SystemConfigPanel';
 
 export default function AdminPage() {
     const { user, isLoading: authLoading } = useAuth();
@@ -133,7 +134,7 @@ export default function AdminPage() {
             </div>
 
             <Tabs defaultValue="dashboard" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="dashboard" className="flex items-center gap-2">
                         <BarChart3 className="h-4 w-4" />
                         Dashboard
@@ -150,10 +151,21 @@ export default function AdminPage() {
                         <FileStack className="h-4 w-4" />
                         Documentos
                     </TabsTrigger>
+                    <TabsTrigger value="config" className="flex items-center gap-2">
+                        <Settings2 className="h-4 w-4" />
+                        Config
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="dashboard">
-                    <AdminDashboard />
+                    <div className="grid gap-6 lg:grid-cols-3">
+                        <div className="lg:col-span-2">
+                            <AdminDashboard />
+                        </div>
+                        <div className="lg:col-span-1">
+                            <SystemAlertsPanel />
+                        </div>
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="logs">
@@ -162,6 +174,10 @@ export default function AdminPage() {
 
                 <TabsContent value="documents">
                     <DocumentsManagementTable />
+                </TabsContent>
+
+                <TabsContent value="config">
+                    <SystemConfigPanel />
                 </TabsContent>
 
                 <TabsContent value="users">

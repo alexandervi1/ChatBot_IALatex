@@ -88,9 +88,7 @@ export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
     };
 
     const handleSubmit = async () => {
-        // Allow empty API key for local provider
-        const isLocalProvider = selectedProvider === 'local';
-        if (!isLocalProvider && !apiKey.trim()) return;
+        if (!apiKey.trim()) return;
 
         setIsSubmitting(true);
         try {
@@ -234,52 +232,27 @@ export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
                                     </ol>
                                 </div>
 
-                                {/* Hardware requirements for local model */}
-                                {currentProvider.id === 'local' && (
-                                    <div className="rounded-lg border p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
-                                        <h4 className="font-medium mb-2 flex items-center gap-2 text-amber-900 dark:text-amber-100">
-                                            <AlertCircle className="h-4 w-4" />
-                                            Requisitos de Hardware
-                                        </h4>
-                                        <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1 list-disc list-inside">
-                                            <li>GPU: 8GB+ VRAM (recomendado, opcional)</li>
-                                            <li>RAM: 16GB+ (mínimo 8GB)</li>
-                                            <li>CPU: 8+ cores</li>
-                                            <li>Disco: ~2-4GB por modelo</li>
-                                        </ul>
-                                        <p className="text-xs mt-2 text-amber-700 dark:text-amber-300">
-                                            ⚡ GPU acelera mucho la generación. Sin GPU, funciona pero más lento.
-                                        </p>
-                                    </div>
-                                )}
+
                             </>
                         )}
 
-                        {/* API Key Input - hidden for local provider */}
-                        {currentProvider.id !== 'local' ? (
-                            <div className="grid gap-2">
-                                <Label htmlFor="api-key">
-                                    Tu Clave API de {currentProvider?.name || "IA"}
-                                </Label>
-                                <Input
-                                    id="api-key"
-                                    type="password"
-                                    placeholder={currentProvider?.api_key_placeholder || "API Key..."}
-                                    value={apiKey}
-                                    onChange={(e) => setApiKey(e.target.value)}
-                                />
-                                <p className="text-[0.8rem] text-muted-foreground flex items-center gap-1">
-                                    <AlertCircle className="h-3 w-3" />
-                                    Tu clave se guarda de forma segura.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="rounded-lg border p-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
-                                <p className="text-sm text-green-800 dark:text-green-200">
-                                    ✓ No necesitas API key. Solo haz clic en "Guardar Configuración" para activar el modo local.
-                                </p>
-                            </div>
-                        )}
+                        {/* API Key Input */}
+                        <div className="grid gap-2">
+                            <Label htmlFor="api-key">
+                                Tu Clave API de {currentProvider?.name || "IA"}
+                            </Label>
+                            <Input
+                                id="api-key"
+                                type="password"
+                                placeholder={currentProvider?.api_key_placeholder || "API Key..."}
+                                value={apiKey}
+                                onChange={(e) => setApiKey(e.target.value)}
+                            />
+                            <p className="text-[0.8rem] text-muted-foreground flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Tu clave se guarda de forma segura.
+                            </p>
+                        </div>
                     </div>
                 </ScrollArea>
 
@@ -295,7 +268,7 @@ export function ApiKeyGuide({ isOpen, onOpenChange }: ApiKeyGuideProps) {
                     )}
                     <Button
                         onClick={handleSubmit}
-                        disabled={(selectedProvider !== 'local' && !apiKey.trim()) || isSubmitting}
+                        disabled={!apiKey.trim() || isSubmitting}
                     >
                         {isSubmitting ? "Guardando..." : "Guardar y Continuar"}
                     </Button>

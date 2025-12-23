@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -17,7 +16,7 @@ interface CitationDialogProps {
  * Supports APA, IEEE, Chicago, and MLA formats.
  */
 export function CitationDialog({ open, onOpenChange, onGenerateCitation }: CitationDialogProps) {
-    const [citationFormat, setCitationFormat] = useState<'APA' | 'IEEE' | 'Chicago' | 'MLA'>('APA');
+    const [citationFormat, setCitationFormat] = useState<'APA' | 'IEEE' | 'Chicago' | 'MLA' | 'BibTeX'>('APA');
     const [citationInput, setCitationInput] = useState('');
 
     const handleGenerate = () => {
@@ -46,6 +45,7 @@ export function CitationDialog({ open, onOpenChange, onGenerateCitation }: Citat
                                 <SelectItem value="IEEE">IEEE (Ingeniería, Computación)</SelectItem>
                                 <SelectItem value="Chicago">Chicago (Humanidades)</SelectItem>
                                 <SelectItem value="MLA">MLA (Literatura, Artes)</SelectItem>
+                                <SelectItem value="BibTeX">BibTeX (LaTeX Nativo)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

@@ -4,13 +4,13 @@
 
 Sistema avanzado de chatbot con IA que combina **búsqueda semántica RAG**, **generación de respuestas con múltiples proveedores de IA**, y un **editor LaTeX inteligente** con copiloto.
 
-![Version](https://img.shields.io/badge/version-4.1.1-blue)
+![Version](https://img.shields.io/badge/version-4.2.0-blue)
 ![Python](https://img.shields.io/badge/python-3.11+-green)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-teal)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black)
 ![Docker](https://img.shields.io/badge/Docker-Enabled-blue)
 ![License](https://img.shields.io/badge/license-MIT-orange)
-![Tests](https://img.shields.io/badge/tests-60+-brightgreen)
+![Tests](https://img.shields.io/badge/tests-80+-brightgreen)
 
 [🚀 Inicio Rápido](#-inicio-rápido-con-docker) • [📖 Documentación](#-características-principales) • [🔧 Instalación Manual](#-instalación-manual-desarrollo) • [❓ FAQ](#-preguntas-frecuentes)
 
@@ -42,8 +42,8 @@ Este es un **chatbot inteligente** diseñado para consultar documentos académic
 
 - **Chat con tus documentos**: Sube PDFs, Word, TXT y haz preguntas sobre su contenido
 - **Editor LaTeX con IA**: Escribe documentos académicos con asistencia de IA
-- **Múltiples proveedores de IA**: Usa Gemini, OpenAI, Claude, o modelos locales gratuitos
-- **100% privado**: Opción de ejecutar todo localmente sin enviar datos a la nube
+- **Múltiples proveedores de IA**: Usa Gemini, OpenAI o Claude
+- **Privacidad**: Datos encriptados y seguridad empresarial
 
 ### ¿Para quién es?
 
@@ -60,7 +60,7 @@ Este es un **chatbot inteligente** diseñado para consultar documentos académic
 ### Requisitos Previos
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y ejecutándose
-- 8 GB de RAM mínimo (16 GB recomendado para modelo local)
+- 8 GB de RAM mínimo
 - 10 GB de espacio en disco
 
 ### Paso 1: Clonar el Repositorio
@@ -141,7 +141,6 @@ Este comando inicia:
 | PostgreSQL | 5432 | Base de datos con pgvector |
 | Redis | 6379 | Cache y cola de tareas |
 | Celery | - | Worker para tareas asíncronas |
-| Ollama | 11434 | Modelos IA locales (opcional) |
 
 ### Paso 4: Inicializar la Base de Datos
 
@@ -158,20 +157,27 @@ docker-compose exec backend alembic upgrade head
 
 Deberías ver:
 ```json
-{"status": "healthy", "version": "4.1.1"}
+{"status": "healthy", "version": "4.2.0"}
 ```
 
-### Paso 6: (Opcional) Configurar Modelo Local
+### Paso 6: Crear Super Admin
 
-Si quieres usar IA **sin API key** (100% gratis y privado):
+Para acceder al panel de administración (`/admin`), necesitas crear un usuario con rol de administrador:
 
 ```bash
-# Descargar modelo Llama 3.2 (3B parámetros, ~2GB)
-docker exec chatbot_ollama ollama pull llama3.2:3b
-
-# Para equipos con más RAM (8B parámetros, mejor calidad)
-docker exec chatbot_ollama ollama pull llama3.1:8b
+# Ejecutar script de creación de admin dentro del contenedor
+docker-compose exec backend python create_admin.py
 ```
+
+El script te pedirá:
+1. **Email**: correo del administrador
+2. **Password**: contraseña segura
+
+> 💡 Si el usuario ya existe, el script te preguntará si deseas actualizarlo a admin.
+
+Una vez creado, podrás acceder a:
+- **Panel de Admin**: [http://localhost:3000/admin](http://localhost:3000/admin)
+- **Funcionalidades**: Dashboard con gráficos, gestión de usuarios, logs, documentos, configuración del sistema
 
 ### ✅ ¡Listo!
 
@@ -180,6 +186,35 @@ Ahora puedes:
 2. Crear una cuenta
 3. Subir documentos PDF, DOCX o TXT
 4. ¡Empezar a chatear con tus documentos!
+
+### 🔒 Notas de Seguridad
+
+La configuración por defecto incluye:
+- **Puertos internos**: PostgreSQL y Redis solo son accesibles dentro de Docker
+- **Logging**: Rotación automática de logs (máx. 50MB por servicio)
+- **Usuario no-root**: Los contenedores ejecutan como usuario sin privilegios
+
+> 💡 Para acceso externo a la DB (desarrollo), descomenta los puertos en `docker-compose.yml`
+
+### 💾 Backup de Base de Datos
+
+```powershell
+# Windows - Crear backup
+.\backup-db.ps1
+
+# Windows - Restaurar
+.\backup-db.ps1 -Restore ".\backups\backup_20231223.sql"
+```
+
+```bash
+# Linux/Mac - Crear backup
+./backup-db.sh
+
+# Linux/Mac - Restaurar
+./backup-db.sh --restore ./backups/backup_20231223.sql.gz
+```
+
+Los backups se guardan en `./backups/` y se mantienen los últimos 7 automáticamente.
 
 ---
 
@@ -254,6 +289,29 @@ npm run dev
 
 El frontend estará disponible en [http://localhost:3000](http://localhost:3000)
 
+### Crear Super Admin (Sin Docker)
+
+En el modo de desarrollo manual, ejecuta el script directamente:
+
+```bash
+# Desde el directorio backend con el entorno virtual activado
+cd backend
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # Linux/Mac
+
+python create_admin.py
+```
+
+Ingresa email y contraseña cuando se te solicite. El usuario se creará con rol `admin`.
+
+### Verificar que Todo Funciona
+
+1. **Backend**: [http://localhost:8000/docs](http://localhost:8000/docs) - Swagger UI
+2. **Frontend**: [http://localhost:3000](http://localhost:3000) - Interfaz web
+3. **Admin Panel**: [http://localhost:3000/admin](http://localhost:3000/admin) - Panel de administración
+
+> ⚠️ **Importante**: Asegúrate de que PostgreSQL y Redis estén corriendo antes de iniciar el backend.
+
 ---
 
 ## 🤖 Proveedores de IA Soportados
@@ -263,26 +321,6 @@ El frontend estará disponible en [http://localhost:3000](http://localhost:3000)
 | **Google Gemini** | gemini-2.5-flash, gemini-2.5-pro | ✅ [Obtener](https://aistudio.google.com/app/apikey) | Gratis con límites |
 | **OpenAI** | gpt-4o-mini, gpt-4o, gpt-4-turbo | ✅ [Obtener](https://platform.openai.com/api-keys) | Pago por uso |
 | **Anthropic Claude** | claude-3-5-sonnet, claude-3-haiku | ✅ [Obtener](https://console.anthropic.com/settings/keys) | Pago por uso |
-| **Local (Ollama)** | llama3.2:3b, llama3.1:8b, mistral:7b | ❌ | **Gratis** |
-
-### 🏠 Modelo Local (Recomendado para Privacidad)
-
-El modo local usa **Ollama** para ejecutar modelos de IA directamente en tu computadora:
-
-| Ventaja | Descripción |
-|---------|-------------|
-| 💰 **Gratis** | Sin costos de API |
-| 🔒 **Privado** | Los datos nunca salen de tu equipo |
-| ♾️ **Sin límites** | Sin restricciones de tokens |
-| 🌐 **Offline** | Funciona sin internet |
-
-#### Requisitos de Hardware para Modelo Local
-
-| Modelo | RAM Mínima | RAM Recomendada | GPU (Opcional) |
-|--------|-----------|-----------------|----------------|
-| llama3.2:3b | 8 GB | 16 GB | 4 GB VRAM |
-| llama3.1:8b | 16 GB | 32 GB | 8 GB VRAM |
-| mistral:7b | 16 GB | 32 GB | 8 GB VRAM |
 
 ---
 
@@ -307,13 +345,15 @@ El modo local usa **Ollama** para ejecutar modelos de IA directamente en tu comp
 ### 📝 Editor LaTeX con Copiloto
 - **Interfaz Estilo VS Code**: Barra de iconos vertical para acceso rápido
 - **Paneles Colapsables**: Documentos, Outline, Símbolos (toggle con un clic)
-- **Autocompletado 80+ Comandos**: Comandos LaTeX con snippets inteligentes
-- **58 Símbolos Matemáticos**: Inserción rápida por categorías (griego, operadores, flechas)
+- **Autocompletado 200+ Comandos**: Comandos LaTeX con snippets inteligentes
+- **200+ Símbolos Matemáticos**: 9 categorías (griego, operadores, flechas, relaciones, etc.)
 - **Navegación por Outline**: Panel de estructura con clic para navegar
-- **11 Plantillas Profesionales**: Artículos, tesis, CV, cartas, informes, presentaciones
+- **50+ Plantillas Profesionales**: Artículos, tesis, CV, cartas, informes, presentaciones Beamer
 - **Acciones Contextuales IA**: Clic derecho para mejorar, traducir o corregir
 - **Compilación en Tiempo Real**: Vista previa PDF instantánea
-- **Optimizado para 1366x768**: UI compacta y eficiente
+- **Spell Check Multi-idioma**: Español, inglés, portugués, francés, alemán
+- **Code Folding**: Colapsar secciones y entornos LaTeX
+- **Galería de Plantillas**: Búsqueda y filtrado por categoría/dificultad
 
 ### 🔐 Seguridad Empresarial
 - **JWT + Refresh Tokens**: Rotación automática cada 30 minutos
@@ -321,10 +361,19 @@ El modo local usa **Ollama** para ejecutar modelos de IA directamente en tu comp
 - **Rate Limiting por Rol**: Límites diferenciados (anónimo/user/admin)
 - **Auditoría Completa**: Log de todas las acciones sensibles
 
+### 🤝 Colaboración en Tiempo Real (Nuevo en 4.2)
+- **Cursores Sincronizados**: Ve dónde editan otros usuarios
+- **Selección Compartida**: Visualiza selecciones de colaboradores
+- **Chat de Proyecto**: Comunicación integrada en el editor
+- **Control de Versiones**: Historial Git-style con diff viewer
+- **Invitaciones**: Comparte proyectos por email
+
 ### 🎨 Experiencia de Usuario
 - **6 Temas Visuales**: Oscuro, Claro, Rojo Pasión, Alto Contraste, Matrix, Vintage
 - **Drag & Drop**: Arrastra archivos para subirlos
 - **Responsive**: Funciona en desktop y tablet
+- **Dark Mode por Defecto**: Con ThemeProvider profesional
+- **Accesibilidad WCAG 2.1**: Skip links, focus trap, alto contraste
 
 ---
 
@@ -358,11 +407,11 @@ El modo local usa **Ollama** para ejecutar modelos de IA directamente en tu comp
 │   └───────────────────────────────────────────────────┘    │
 └───────┬────────────┬────────────┬─────────────┬────────────┘
         │            │            │             │
-   ┌────▼────┐  ┌────▼────┐  ┌────▼────┐  ┌────▼────┐
-   │   DB    │  │  Redis  │  │ Celery  │  │ Ollama  │
-   │  5432   │  │  6379   │  │ Worker  │  │  11434  │
-   └─────────┘  └─────────┘  └─────────┘  └─────────┘
-   PostgreSQL     Cache        Async       LLM Local
+   ┌────▼────┐  ┌────▼────┐  ┌────▼────┐
+   │   DB    │  │  Redis  │  │ Celery  │
+   │  5432   │  │  6379   │  │ Worker  │
+   └─────────┘  └─────────┘  └─────────┘
+   PostgreSQL     Cache        Async
    + pgvector    + Queue       Tasks
 ```
 
@@ -442,10 +491,8 @@ El modo local usa **Ollama** para ejecutar modelos de IA directamente en tu comp
 ### 2. Configurar Proveedor de IA
 
 1. Una vez logueado, verás un diálogo para configurar tu proveedor
-2. Elige una opción:
-   - **Local (Ollama)**: Gratis, sin API key necesaria
-   - **Gemini/OpenAI/Claude**: Requiere API key
-3. Si eliges un proveedor en la nube, sigue las instrucciones para obtener tu API key
+2. Elige un proveedor: **Gemini**, **OpenAI**, o **Claude**
+3. Sigue las instrucciones para obtener tu API key
 
 ### 3. Subir Documentos
 
@@ -638,19 +685,6 @@ docker-compose logs db -f
 docker-compose exec backend alembic current
 ```
 
-### El modelo local no responde
-
-```bash
-# Verificar que Ollama está corriendo
-docker exec chatbot_ollama ollama list
-
-# Descargar modelo si no existe
-docker exec chatbot_ollama ollama pull llama3.2:3b
-
-# Ver logs de Ollama
-docker-compose logs ollama -f
-```
-
 ### Error "Rate limit exceeded"
 
 Espera un minuto o inicia sesión para aumentar tu límite:
@@ -664,7 +698,7 @@ Espera un minuto o inicia sesión para aumentar tu límite:
 
 ### ¿Puedo usar la app sin API key?
 
-**Sí**, usando el modo Local (Ollama). Es 100% gratis y privado.
+**Depende.** Los proveedores en la nube tienen capas gratuitas, pero eventualmente pueden requerir pago.
 
 ### ¿Qué formatos de documentos soporta?
 
@@ -672,11 +706,11 @@ PDF, DOCX, TXT y PPTX.
 
 ### ¿Mis datos están seguros?
 
-Sí. Si usas el modo local, tus datos nunca salen de tu computadora. Las API keys se almacenan encriptadas.
+Sí. Las API keys se almacenan encriptadas y los proveedores (Gemini/OpenAI) tienen políticas de privacidad estrictas para empresas.
 
 ### ¿Funciona offline?
 
-Solo con el modo Local (Ollama). Los proveedores en la nube requieren internet.
+**No.** El sistema requiere conexión para interactuar con los proveedores de IA (Gemini, OpenAI, Anthropic).
 
 ### ¿Cuántos documentos puedo subir?
 

@@ -12,7 +12,7 @@ from slowapi.errors import RateLimitExceeded
 
 # Importaciones locales
 from database.connection import Base, engine
-from .routers import auth, documents, chat, admin, providers
+from .routers import auth, documents, chat, admin, providers, collaboration, versions, integrations
 from .connection_manager import manager
 from .exception_handlers import register_exception_handlers
 from .rate_limiter import get_rate_limiter
@@ -87,7 +87,7 @@ Sistema avanzado de chatbot con IA que combina **búsqueda semántica RAG**,
 ### Características Principales
 
 * 🔍 **Búsqueda Híbrida**: Combina búsqueda semántica (embeddings) y búsqueda por palabras clave.
-* 💬 **Multi-Proveedor IA**: Soporta Gemini, OpenAI, Anthropic y modelos locales (Ollama).
+* 💬 **Multi-Proveedor IA**: Soporta Gemini, OpenAI y Anthropic.
 * 📝 **Editor LaTeX**: Copiloto inteligente para edición de documentos académicos.
 * 📊 **Procesamiento Asíncrono**: Cola de tareas con Celery para operaciones pesadas.
 
@@ -227,6 +227,9 @@ app.include_router(documents.router)
 app.include_router(chat.router)
 app.include_router(admin.router)
 app.include_router(providers.router)
+app.include_router(collaboration.router)
+app.include_router(versions.router)
+app.include_router(integrations.router)
 
 
 # --- Metrics Endpoint ---

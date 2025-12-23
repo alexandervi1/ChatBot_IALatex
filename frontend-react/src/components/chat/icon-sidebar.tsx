@@ -7,7 +7,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { FolderOpen, FileText, Calculator, Settings, MessageSquare, Edit3 } from 'lucide-react';
+import { FolderOpen, FileText, Calculator, MessageSquare, Edit3 } from 'lucide-react';
 
 interface IconSidebarProps {
     activePanel: 'documents' | 'outline' | 'symbols' | null;
@@ -31,8 +31,8 @@ function IconButton({ icon: Icon, tooltip, active, onClick }: IconButtonProps) {
                         variant="ghost"
                         size="icon"
                         className={`h-10 w-10 rounded-none transition-all ${active
-                                ? 'bg-primary/10 border-l-2 border-primary text-primary'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                            ? 'bg-primary/10 border-l-2 border-primary text-primary'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                             }`}
                         onClick={onClick}
                     >

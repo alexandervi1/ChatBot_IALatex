@@ -34,11 +34,10 @@
 - **Re-Ranking:** `cross-encoder/ms-marco-MiniLM-L-6-v2`.
 - **LLM Providers:**
     - Google Gemini (Principal).
-    - Ollama (Local/Self-hosted).
     - Anthropic / OpenAI (Integrados).
 
 ### Infraestructura
-- **Docker:** `docker-compose.yml` orquesta 5 servicios (Frontend, Backend, DB, Cache, Ollama).
+- **Docker:** `docker-compose.yml` orquesta 5 servicios (Frontend, Backend, DB, Cache).
 - **Deploy:** Coolify (Self-hosted) o Servidores VPS.
 
 ---

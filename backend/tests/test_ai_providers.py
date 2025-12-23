@@ -2,7 +2,7 @@
 Tests for AI Provider Abstraction Layer.
 
 Tests the multi-provider architecture with mocked HTTP responses.
-Covers: GeminiProvider, OpenAIProvider, AnthropicProvider, LocalProvider, ProviderFactory
+Covers: GeminiProvider, OpenAIProvider, AnthropicProvider, ProviderFactory
 """
 import os
 os.environ['DATABASE_URL'] = 'sqlite:///./test_providers.db'
@@ -17,7 +17,6 @@ from services.ai_providers import (
     GeminiProvider,
     OpenAIProvider,
     AnthropicProvider,
-    LocalProvider,
     ProviderFactory,
 )
 
@@ -35,10 +34,6 @@ def openai_provider():
 @pytest.fixture
 def anthropic_provider():
     return AnthropicProvider()
-
-@pytest.fixture
-def local_provider():
-    return LocalProvider()
 
 
 # --- Provider Properties Tests ---
@@ -103,26 +98,7 @@ class TestAnthropicProvider:
         assert any("claude-3" in mid for mid in model_ids)
 
 
-class TestLocalProvider:
-    """Tests for Local Ollama provider."""
-    
-    def test_properties(self, local_provider):
-        """Test provider properties are correct."""
-        assert local_provider.name == "Local (Ollama)"
-        assert local_provider.provider_id == "local"
-        assert "llama" in local_provider.default_model.lower()
-        assert len(local_provider.models) >= 3
-        assert local_provider.api_key_url == "#"  # No API key needed
-        assert "No necesitas" in local_provider.api_key_placeholder
-        assert len(local_provider.setup_steps) == 4
-    
-    def test_models_include_multiple_options(self, local_provider):
-        """Test multiple local models are available."""
-        model_ids = [m["id"] for m in local_provider.models]
-        assert len(model_ids) >= 3
-        # Should have llama and mistral
-        assert any("llama" in mid for mid in model_ids)
-        assert any("mistral" in mid for mid in model_ids)
+
 
 
 # --- ProviderFactory Tests ---
@@ -148,12 +124,6 @@ class TestProviderFactory:
         assert isinstance(provider, AnthropicProvider)
         assert provider.provider_id == "anthropic"
     
-    def test_get_local_provider(self):
-        """Test getting Local provider by ID."""
-        provider = ProviderFactory.get_provider("local")
-        assert isinstance(provider, LocalProvider)
-        assert provider.provider_id == "local"
-    
     def test_case_insensitive(self):
         """Test provider lookup is case-insensitive."""
         provider1 = ProviderFactory.get_provider("GEMINI")
@@ -171,13 +141,12 @@ class TestProviderFactory:
         """Test listing all providers."""
         providers = ProviderFactory.list_providers()
         
-        assert len(providers) == 4  # gemini, openai, anthropic, local
+        assert len(providers) >= 3  # gemini, openai, anthropic
         
         provider_ids = [p["id"] for p in providers]
         assert "gemini" in provider_ids
         assert "openai" in provider_ids
         assert "anthropic" in provider_ids
-        assert "local" in provider_ids
         
         # Each provider should have required fields
         for provider in providers:
@@ -259,41 +228,7 @@ class TestOpenAIStreaming:
             assert "Error" in chunks[0] or "401" in chunks[0]
 
 
-class TestLocalProviderStreaming:
-    """Tests for Local/Ollama streaming generation."""
-    
-    @pytest.mark.asyncio
-    async def test_generate_stream_ollama_format(self, local_provider):
-        """Test Ollama response format handling."""
-        # Ollama returns NDJSON (one JSON per line)
-        mock_lines = [
-            '{"response":"Hello"}',
-            '{"response":" there"}',
-            '{"response":"!", "done": true}',
-        ]
-        
-        mock_response = AsyncMock()
-        mock_response.status_code = 200
-        mock_response.aiter_lines = AsyncMock(return_value=iter(mock_lines))
-        
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_instance = AsyncMock()
-            mock_client.return_value.__aenter__.return_value = mock_instance
-            
-            mock_stream_context = AsyncMock()
-            mock_stream_context.__aenter__.return_value = mock_response
-            mock_stream_context.__aexit__.return_value = None
-            mock_instance.stream.return_value = mock_stream_context
-            
-            chunks = []
-            async for chunk in local_provider.generate_stream(
-                prompt="Test prompt",
-                api_key="",  # Local doesn't need API key
-            ):
-                chunks.append(chunk)
-            
-            # Verify chunks were collected
-            assert len(chunks) >= 0  # May be empty if mocking doesn't work perfectly
+
 
 
 # --- Token Usage Callback Tests ---
@@ -331,7 +266,7 @@ class TestProviderInheritance:
             GeminiProvider(),
             OpenAIProvider(),
             AnthropicProvider(),
-            LocalProvider(),
+
         ]
         
         for provider in providers:

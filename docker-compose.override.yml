@@ -1,0 +1,29 @@
+# =============================================================================
+# docker-compose.override.yml - Configuración de DESARROLLO
+#
+# Este archivo se aplica automáticamente junto con docker-compose.yml
+# Para producción, usa: docker-compose -f docker-compose.yml up
+# =============================================================================
+
+services:
+  # Backend con hot-reload (volumen de código local)
+  backend:
+    volumes:
+      - ./backend:/home/appuser/app
+    environment:
+      - DEBUG=true
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery worker con auto-restart
+  celery_worker:
+    volumes:
+      - ./backend:/home/appuser/app
+    environment:
+      - DEBUG=true
+  # Frontend con volumen para desarrollo (si no usas standalone)
+  # Descomenta si necesitas hot-reload en Docker
+  # frontend:
+  #   volumes:
+  #     - ./frontend-react/src:/app/src
+  #   environment:
+  #     - NODE_ENV=development

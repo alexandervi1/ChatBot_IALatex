@@ -1,22 +1,21 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Wand2, Download, Eye, Loader2, AlertTriangle, BookMarked, Save, Quote, BarChart, PanelLeftClose, PanelLeft, ChevronUp, ChevronDown, Wrench } from 'lucide-react';
 import Editor, { OnMount } from '@monaco-editor/react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { Document, Page, pdfjs } from 'react-pdf';
-import { useState, useEffect, useRef } from 'react';
+import { Panel, PanelGroup, PanelResizeHandle, ImperativePanelHandle } from 'react-resizable-panels';
+import { pdfjs } from 'react-pdf';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { latexTemplates, LaTeXTemplate } from '@/lib/latex-templates';
 import { registerLatexCompletions } from '@/lib/latex-completions';
 import { streamCopilot } from '@/lib/api-client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from "@/lib/hooks/use-toast";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
-import { generateCitation, parseCitationInput, type CitationFormat } from '@/lib/citation-utils';
-import { DocumentOutline } from './document-outline';
-import { SymbolPicker } from './symbol-picker';
+import { generateCitation, parseCitationInput, generateBibTeXEntry } from '@/lib/citation-utils';
+import { PdfPreview } from './pdf-preview';
+import { EditorToolbar } from './editor-toolbar';
+import { EditorSidebar } from './editor-sidebar';
+import { Loader2, Wand2 } from 'lucide-react';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
@@ -40,26 +39,58 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
   const [customTemplates, setCustomTemplates] = useState<LaTeXTemplate[]>([]);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
+
+  // Citation Dialog State
   const [isCitationDialogOpen, setIsCitationDialogOpen] = useState(false);
-  const [citationFormat, setCitationFormat] = useState<'APA' | 'IEEE' | 'Chicago' | 'MLA'>('APA');
+  const [citationFormat, setCitationFormat] = useState<'APA' | 'IEEE' | 'Chicago' | 'MLA' | 'BibTeX'>('APA');
   const [citationInput, setCitationInput] = useState('');
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [showToolbar, setShowToolbar] = useState(true);
-  const [showStats, setShowStats] = useState(true);
-  const [showAiBar, setShowAiBar] = useState(true);
+
+  // UI State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Closed by default (Minimalist)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState<number | 'auto' | 'page-fit'>('auto');
+
   const { toast } = useToast();
   const isMobile = useMediaQuery('(max-width: 767px)');
 
   const editorInstanceRef = useRef<any>(null);
   const pdfPreviewRef = useRef<HTMLDivElement>(null);
+  const sidebarPanelRef = useRef<ImperativePanelHandle>(null);
+  const previewPanelRef = useRef<ImperativePanelHandle>(null);
   const isSyncing = useRef(false);
 
-  // Document statistics
-  const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-  const charCount = text.length;
-  const lineCount = text.split('\n').length;
+  // --- Layout Management ---
 
-  // Navigate to specific line in editor
+  const toggleSidebar = () => {
+    const sidebar = sidebarPanelRef.current;
+    if (sidebar) {
+      if (isSidebarOpen) {
+        sidebar.collapse();
+      } else {
+        sidebar.resize(20); // Expand to 20%
+      }
+      setIsSidebarOpen(!isSidebarOpen);
+    }
+  };
+
+  const togglePreview = () => {
+    const preview = previewPanelRef.current;
+    if (preview) {
+      if (isPreviewOpen) {
+        preview.collapse();
+      } else {
+        preview.resize(40); // Restore to ~40%
+      }
+      setIsPreviewOpen(!isPreviewOpen);
+    }
+  };
+
+  // --- Events & Listeners ---
+
+  // Listen for navigation/insert events (from new Sidebar components)
+  // Note: We pass handlers directly to EditorSidebar, but if we keep custom events for decoupling:
+  // We'll reimplement direct handlers for simplicity in the new architecture.
+
   const handleNavigateToLine = (line: number) => {
     if (editorInstanceRef.current) {
       editorInstanceRef.current.revealLineInCenter(line);
@@ -68,7 +99,6 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
     }
   };
 
-  // Insert symbol at cursor position
   const handleInsertSymbol = (latex: string) => {
     if (editorInstanceRef.current) {
       const editor = editorInstanceRef.current;
@@ -87,23 +117,6 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
     }
   };
 
-  // Listen for navigation events from OutlinePanel
-  useEffect(() => {
-    const handleNavigate = (e: CustomEvent<{ line: number }>) => {
-      handleNavigateToLine(e.detail.line);
-    };
-    window.addEventListener('navigate-to-line', handleNavigate as EventListener);
-    return () => window.removeEventListener('navigate-to-line', handleNavigate as EventListener);
-  }, []);
-
-  // Listen for symbol insert events from SymbolsPanel
-  useEffect(() => {
-    const handleInsert = (e: CustomEvent<{ latex: string }>) => {
-      handleInsertSymbol(e.detail.latex);
-    };
-    window.addEventListener('insert-symbol', handleInsert as EventListener);
-    return () => window.removeEventListener('insert-symbol', handleInsert as EventListener);
-  }, []);
 
   useEffect(() => {
     const savedTemplates = localStorage.getItem('custom_latex_templates');
@@ -118,19 +131,21 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
     }
   }, [text, setPreviewError]);
 
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+  const previousScrollTop = useRef<number>(0);
+
+  function onDocumentLoadSuccess(numPages: number) {
     setNumPages(numPages);
+    // Restore scroll position after reload
+    if (pdfPreviewRef.current && previousScrollTop.current > 0) {
+      setTimeout(() => {
+        if (pdfPreviewRef.current) {
+          pdfPreviewRef.current.scrollTop = previousScrollTop.current;
+        }
+      }, 100);
+    }
   }
 
-  const handleTemplateSelect = (template: LaTeXTemplate) => {
-    if (text.trim() !== '') {
-      const confirmed = window.confirm(`¿Estás seguro de que quieres reemplazar el contenido actual con la plantilla "${template.name}"?`);
-      if (!confirmed) {
-        return;
-      }
-    }
-    setText(template.content);
-  };
+  // --- Actions ---
 
   const handleSaveTemplate = () => {
     if (newTemplateName.trim() === '') {
@@ -159,36 +174,91 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
   };
 
   const handleGenerateCitation = () => {
+    // (Reusable logic extracted or kept here)
+    // For brevity, using the same logic as before but linked to toolbar
+    // ... [Dependencies like parseCitationInput needed]
+    // We'll reopen the dialog to let user input data
+    setIsCitationDialogOpen(true);
+  };
+
+  const executeCitationInsert = () => {
     if (citationInput.trim() === '') {
       toast({ title: "Error", description: "Ingresa información de la cita.", variant: "destructive" });
       return;
     }
-
     const parsedData = parseCitationInput(citationInput);
-    const citation = generateCitation(parsedData, citationFormat);
 
-    if (editorInstanceRef.current) {
-      const editor = editorInstanceRef.current;
-      const position = editor.getPosition();
+    if (citationFormat === 'BibTeX') {
+      const bibEntry = generateBibTeXEntry(parsedData);
+      const keyMatch = bibEntry.match(/@\w+{([^,]+),/);
+      const key = keyMatch ? keyMatch[1] : 'citation';
+      const citeCmd = `\\cite{${key}}`;
 
-      editor.executeEdits('citation', [{
-        range: {
-          startLineNumber: position.lineNumber,
-          startColumn: position.column,
-          endLineNumber: position.lineNumber,
-          endColumn: position.column
-        },
-        text: citation,
-        forceMoveMarkers: true
-      }]);
+      if (editorInstanceRef.current) {
+        const editor = editorInstanceRef.current;
+        const position = editor.getPosition();
+        editor.executeEdits('citation', [{
+          range: {
+            startLineNumber: position.lineNumber, startColumn: position.column,
+            endLineNumber: position.lineNumber, endColumn: position.column
+          },
+          text: citeCmd, forceMoveMarkers: true
+        }]);
+
+        // Append entry
+        const model = editor.getModel();
+        const lineCount = model.getLineCount();
+        const lastLineLength = model.getLineMaxColumn(lineCount);
+        editor.executeEdits('append-bib', [{
+          range: {
+            startLineNumber: lineCount, startColumn: lastLineLength,
+            endLineNumber: lineCount, endColumn: lastLineLength
+          },
+          text: `\n\n${bibEntry}\n`, forceMoveMarkers: true
+        }]);
+      } else {
+        setText(text + citeCmd + `\n\n${bibEntry}\n`);
+      }
+      toast({ title: "Cita BibTeX generada", description: `Se insertó \\cite{${key}} y la entrada bibliográfica.` });
     } else {
-      // Fallback: append to end
-      setText(text + '\n' + citation);
+      const citation = generateCitation(parsedData, citationFormat);
+      if (editorInstanceRef.current) {
+        const editor = editorInstanceRef.current;
+        const position = editor.getPosition();
+        editor.executeEdits('citation', [{
+          range: {
+            startLineNumber: position.lineNumber, startColumn: position.column,
+            endLineNumber: position.lineNumber, endColumn: position.column
+          },
+          text: citation, forceMoveMarkers: true
+        }]);
+      } else {
+        setText(text + '\n' + citation);
+      }
+      toast({ title: "Cita generada", description: `Formato: ${citationFormat}` });
     }
-
     setIsCitationDialogOpen(false);
     setCitationInput('');
-    toast({ title: "Cita generada", description: `Formato: ${citationFormat}` });
+  };
+
+
+  const handleAiAction = async (action: string) => {
+    let prompt = "";
+    switch (action) {
+      case 'improve': prompt = "Reescribe este texto con un tono académico, formal y claro para un paper científico en LaTeX. Corrige gramática y estilo."; break;
+      case 'translate': prompt = "Traduce este texto al inglés académico para un paper científico."; break;
+      case 'summarize': prompt = "Resume este texto en un párrafo conciso pero completo, manteniendo los puntos clave. Formato académico."; break;
+      case 'grammar': prompt = "Corrige estrictamente la gramática y ortografía de este texto sin cambiar el estilo."; break;
+      case 'expand': prompt = "Expande este texto añadiendo más detalles, ejemplos y argumentos. Mantén el tono académico."; break;
+      case 'fix-latex': prompt = "Corrige cualquier error de sintaxis LaTeX en este código. Solo devuelve el código corregido."; break;
+      default: return;
+    }
+
+    if (editorInstanceRef.current) {
+      await handleContextualAction(editorInstanceRef.current, prompt);
+    } else {
+      toast({ title: "Error", description: "Editor no cargado", variant: "destructive" });
+    }
   };
 
   const handleContextualAction = async (editor: any, instruction: string) => {
@@ -201,7 +271,7 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
       return;
     }
 
-    toast({ title: "IA Trabajando...", description: "Procesando tu solicitud..." });
+    const toastId = toast({ title: "IA Trabajando...", description: "Procesando solicitud..." });
 
     try {
       let fullResponse = "";
@@ -220,206 +290,205 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
         text: fullResponse,
         forceMoveMarkers: true
       }]);
-
-      // toast({ title: "Listo", description: "Texto actualizado." }); // Optional: clear toast or show success
-
     } catch (error) {
       console.error(error);
-      toast({ title: "Error", description: "No se pudo procesar la solicitud.", variant: "destructive" });
+      toast({ title: "Error", description: "Fallo al procesar solicitud IA", variant: "destructive" });
     }
   };
 
-  // Track if completions are registered (only once per session)
+  // --- Editor Mount ---
+
   const completionsRegistered = useRef(false);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorInstanceRef.current = editor;
 
-    // Register LaTeX autocompletions (only once)
     if (!completionsRegistered.current) {
       registerLatexCompletions(monaco);
       completionsRegistered.current = true;
     }
 
-    // Add Context Menu Actions
+    // Context Menu Actions (Preserved per user request)
     editor.addAction({
-      id: 'improve-writing',
-      label: '✨ Mejorar Redacción (Académico)',
-      contextMenuGroupId: 'navigation',
-      contextMenuOrder: 1,
-      run: (ed: any) => handleContextualAction(ed, "Reescribe este texto con un tono académico, formal y claro para un paper científico en LaTeX. Corrige gramática y estilo.")
+      id: 'improve-writing', label: '✨ Mejorar Redacción', contextMenuGroupId: 'navigation', contextMenuOrder: 1,
+      run: (ed: any) => handleAiAction('improve')
     });
 
     editor.addAction({
-      id: 'translate-en',
-      label: '🇺🇸 Traducir a Inglés',
-      contextMenuGroupId: 'navigation',
-      contextMenuOrder: 2,
-      run: (ed: any) => handleContextualAction(ed, "Traduce este texto al inglés académico para un paper científico.")
+      id: 'translate-en', label: '🇺🇸 Traducir a Inglés', contextMenuGroupId: 'navigation', contextMenuOrder: 2,
+      run: (ed: any) => handleAiAction('translate')
     });
 
     editor.addAction({
-      id: 'fix-latex',
-      label: '🔧 Corregir Código LaTeX',
-      contextMenuGroupId: 'navigation',
-      contextMenuOrder: 3,
-      run: (ed: any) => handleContextualAction(ed, "Corrige cualquier error de sintaxis LaTeX en este código. Solo devuelve el código corregido.")
-    });
-
-    // NEW: Academic Actions
-    editor.addAction({
-      id: 'summarize',
-      label: '📝 Resumir Sección',
-      contextMenuGroupId: 'navigation',
-      contextMenuOrder: 4,
-      run: (ed: any) => handleContextualAction(ed, "Resume este texto en un párrafo conciso pero completo, manteniendo los puntos clave. Formato académico.")
+      id: 'fix-latex', label: '🔧 Corregir Código LaTeX', contextMenuGroupId: 'navigation', contextMenuOrder: 3,
+      run: (ed: any) => handleAiAction('fix-latex')
     });
 
     editor.addAction({
-      id: 'expand',
-      label: '📚 Expandir Párrafo',
-      contextMenuGroupId: 'navigation',
-      contextMenuOrder: 5,
-      run: (ed: any) => handleContextualAction(ed, "Expande este texto añadiendo más detalles, ejemplos y argumentos. Mantén el tono académico.")
+      id: 'summarize', label: '📝 Resumir Sección', contextMenuGroupId: 'navigation', contextMenuOrder: 4,
+      run: (ed: any) => handleAiAction('summarize')
     });
 
-    // Helper function to wrap selection with LaTeX commands
-    const wrapSelection = (prefix: string, suffix: string) => {
-      const selection = editor.getSelection();
-      if (!selection) return;
-
-      const model = editor.getModel();
-      if (!model) return;
-
-      const selectedText = model.getValueInRange(selection);
-      const newText = prefix + selectedText + suffix;
-
-      editor.executeEdits('keyboard', [{
-        range: selection,
-        text: newText,
-        forceMoveMarkers: true
-      }]);
-
-      // Move cursor after inserted text
-      const endPos = selection.getEndPosition();
-      editor.setPosition({ lineNumber: endPos.lineNumber, column: endPos.column + prefix.length + selectedText.length + suffix.length });
-    };
-
-    // Keyboard Shortcuts
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, () => {
-      wrapSelection('\\textbf{', '}');
+    editor.addAction({
+      id: 'expand', label: '📚 Expandir Párrafo', contextMenuGroupId: 'navigation', contextMenuOrder: 5,
+      run: (ed: any) => handleAiAction('expand')
     });
 
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI, () => {
-      wrapSelection('\\textit{', '}');
+    editor.addAction({
+      id: 'grammar', label: '✅ Corregir Gramática', contextMenuGroupId: 'navigation', contextMenuOrder: 6,
+      run: (ed: any) => handleAiAction('grammar')
     });
 
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE, () => {
-      const selection = editor.getSelection();
-      if (!selection) return;
-
-      const model = editor.getModel();
-      if (!model) return;
-
-      const selectedText = model.getValueInRange(selection);
-      const newText = '\\begin{equation}\n' + selectedText + '\n\\end{equation}';
-
-      editor.executeEdits('keyboard', [{
-        range: selection,
-        text: newText,
-        forceMoveMarkers: true
-      }]);
-    });
-
+    // Sync Scroll
     editor.onDidScrollChange((e: { scrollTop: number; scrollHeight: number }) => {
       if (!pdfPreviewRef.current || isSyncing.current) return;
-
       const scrollPercentage = e.scrollTop / (e.scrollHeight - editor.getLayoutInfo().height);
-
       isSyncing.current = true;
       const pdfPreview = pdfPreviewRef.current;
       pdfPreview.scrollTop = scrollPercentage * (pdfPreview.scrollHeight - pdfPreview.clientHeight);
-
       setTimeout(() => { isSyncing.current = false; }, 100);
     });
   };
 
   const handlePdfScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const pdfPreview = event.currentTarget;
+    previousScrollTop.current = pdfPreview.scrollTop;
     const editor = editorInstanceRef.current;
     if (!editor || isSyncing.current) return;
-
     const scrollPercentage = pdfPreview.scrollTop / (pdfPreview.scrollHeight - pdfPreview.clientHeight);
-
     isSyncing.current = true;
     editor.setScrollTop(scrollPercentage * (editor.getScrollHeight() - editor.getLayoutInfo().height));
-
     setTimeout(() => { isSyncing.current = false; }, 100);
   };
 
-  const PreviewContent = () => {
-    switch (previewStatus) {
-      case 'loading':
-        return (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <Loader2 className="h-12 w-12 animate-spin mb-4" />
-            <p>Compilando PDF...</p>
-          </div>
-        );
-      case 'error':
-        return (
-          <div className="flex flex-col items-center justify-center h-full text-destructive p-4">
-            <AlertTriangle className="h-12 w-12 mb-4" />
-            <h3 className="font-semibold text-lg mb-2">Error de Compilación</h3>
-            <pre className="text-xs whitespace-pre-wrap bg-destructive/10 p-2 rounded-md w-full text-left">{previewError}</pre>
-          </div>
-        );
-      case 'success':
-        if (pdfFile) {
-          return (
-            <Document
-              file={pdfFile}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={(error) => setPreviewError(`Error al cargar el PDF: ${error.message}`)}
-            >
-              {Array.from(new Array(numPages), (el, index) => (
-                <Page
-                  key={`page_${index + 1}`}
-                  pageNumber={index + 1}
-                  renderTextLayer={false}
-                  width={pdfPreviewRef.current?.clientWidth ? pdfPreviewRef.current.clientWidth - 32 : undefined}
-                />
-              ))}
-            </Document>
-          );
-        }
-        return null;
-      case 'idle':
-      default:
-        return (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <Eye className="h-12 w-12 mb-4" />
-            <p>Haz clic en "Compilar" para generar la vista previa.</p>
-          </div>
-        );
-    }
-  };
+  // --- Rendering ---
 
   return (
-    <>
+    <div className="flex flex-col h-full bg-background">
+      {/* 1. Unified Toolbar */}
+      <EditorToolbar
+        onSaveTemplate={() => setIsSaveDialogOpen(true)}
+        onDownloadPdf={handleDownload}
+        onDownloadSource={() => {
+          const blob = new Blob([text], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'document.tex';
+          a.click();
+        }}
+        onInsertCitation={() => setIsCitationDialogOpen(true)}
+        onToggleSidebar={toggleSidebar}
+        isSidebarOpen={isSidebarOpen}
+        onTogglePreview={togglePreview}
+        isPreviewOpen={isPreviewOpen}
+        onAiAction={handleAiAction}
+        zoomLevel={zoomLevel}
+        onZoomChange={setZoomLevel}
+        onUndo={() => editorInstanceRef.current?.trigger('api', 'undo', null)}
+        onRedo={() => editorInstanceRef.current?.trigger('api', 'redo', null)}
+        onFormat={() => editorInstanceRef.current?.getAction('editor.action.formatDocument').run()}
+      />
+
+      {/* 2. Main 3-Panel Layout */}
+      <div className="flex-1 min-h-0 relative">
+        <PanelGroup direction={isMobile ? "vertical" : "horizontal"} className="h-full">
+
+          {/* Left Panel: Sidebar (Collapsible) */}
+          <Panel
+            ref={sidebarPanelRef}
+            defaultSize={0} // Start Hidden
+            minSize={15}
+            maxSize={25}
+            collapsible={true}
+            collapsedSize={0}
+            onCollapse={() => setIsSidebarOpen(false)}
+            onExpand={() => setIsSidebarOpen(true)}
+            className={isSidebarOpen ? "" : "hidden"} // Force hide via class when collapsedSize=0 to avoid borders
+          >
+            <EditorSidebar
+              text={text}
+              onNavigate={handleNavigateToLine}
+              onInsertSymbol={handleInsertSymbol}
+            />
+          </Panel>
+
+          {isSidebarOpen && <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />}
+
+          {/* Middle Panel: Code Editor */}
+          <Panel minSize={30}>
+            <div className="h-full relative flex flex-col">
+              <Editor
+                height="100%"
+                defaultLanguage="latex"
+                theme="vs-dark"
+                value={text}
+                onChange={(value) => setText(value || '')}
+                onMount={handleEditorDidMount}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  wordWrap: 'on',
+                  padding: { top: 16 },
+                  automaticLayout: true,
+                }}
+              />
+              {/* Status Bar Overlay or Separate? Let's use AI bar at bottom */}
+              <div className="absolute bottom-4 left-4 right-4 z-10 flex gap-2">
+                {/* Floating AI Input */}
+                <div className="flex-1 max-w-2xl mx-auto bg-background/80 backdrop-blur border rounded-full shadow-lg p-1 flex items-center px-3 ring-1 ring-border focus-within:ring-primary transition-all">
+                  <Wand2 className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
+                  <input
+                    className="flex-1 bg-transparent border-none outline-none text-sm h-8 placeholder:text-muted-foreground/50"
+                    placeholder="Instrucción IA (ej: 'Resume esto', 'Crea una tabla')..."
+                    value={instruction}
+                    onChange={(e) => setInstruction(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    disabled={isLoading}
+                  />
+                  {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary ml-2" />}
+                </div>
+              </div>
+            </div>
+          </Panel>
+
+          {isPreviewOpen && <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />}
+
+          {/* Right Panel: Preview */}
+          <Panel
+            ref={previewPanelRef}
+            defaultSize={40}
+            minSize={20}
+            collapsible={true}
+            collapsedSize={0}
+            onCollapse={() => setIsPreviewOpen(false)}
+            className={isPreviewOpen ? "bg-secondary/30" : "hidden"}
+          >
+            <div className="h-full flex flex-col">
+              <div className="h-full overflow-hidden">
+                {/* Pass zoomLevel if PdfPreview supported it, for now mostly auto-width via flex */}
+                <PdfPreview
+                  ref={pdfPreviewRef}
+                  pdfFile={pdfFile}
+                  previewStatus={previewStatus}
+                  previewError={previewError}
+                  numPages={numPages}
+                  onDocumentLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={(error) => setPreviewError(error)}
+                  onScroll={handlePdfScroll}
+                  zoomLevel={zoomLevel}
+                />
+              </div>
+            </div>
+          </Panel>
+        </PanelGroup>
+      </div>
+
+      {/* Dialogs */}
       <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Guardar Plantilla</DialogTitle>
-            <DialogDescription>
-              Ingresa un nombre para tu nueva plantilla.
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            value={newTemplateName}
-            onChange={(e) => setNewTemplateName(e.target.value)}
-            placeholder="Nombre de la plantilla"
-          />
+          <DialogHeader><DialogTitle>Guardar Plantilla</DialogTitle></DialogHeader>
+          <Input value={newTemplateName} onChange={(e) => setNewTemplateName(e.target.value)} placeholder="Nombre..." />
           <DialogFooter>
             <Button variant="ghost" onClick={() => setIsSaveDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSaveTemplate}>Guardar</Button>
@@ -427,330 +496,42 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
         </DialogContent>
       </Dialog>
 
-      {/* Citation Generator Dialog */}
+      {/* Re-implement Citation Dialog logic inside or keep simple */}
       <Dialog open={isCitationDialogOpen} onOpenChange={setIsCitationDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Generador de Citas Académicas</DialogTitle>
-            <DialogDescription>
-              Ingresa los datos de la publicación y selecciona el formato.
-            </DialogDescription>
+            <DialogTitle>Cita Bibliográfica</DialogTitle>
+            <DialogDescription>Genera citas en formato BibTeX o estándar.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          {/* Reusing the UI from previous simple implementation, but ideally would be a component */}
+          <div className="space-y-4 py-2">
+            {/* ... (Select and Textarea logic mapped to state) ... */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Formato de Cita</label>
-              <Select value={citationFormat} onValueChange={(value: any) => setCitationFormat(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="APA">APA 7th (Psicología, Educación)</SelectItem>
-                  <SelectItem value="IEEE">IEEE (Ingeniería, Computación)</SelectItem>
-                  <SelectItem value="Chicago">Chicago (Humanidades)</SelectItem>
-                  <SelectItem value="MLA">MLA (Literatura, Artes)</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium">Formato</label>
+              <select
+                className="w-full border rounded p-2 text-sm bg-background"
+                value={citationFormat}
+                onChange={(e: any) => setCitationFormat(e.target.value)}
+              >
+                <option value="APA">APA 7th</option>
+                <option value="BibTeX">BibTeX (Recomendado)</option>
+                <option value="IEEE">IEEE</option>
+                <option value="MLA">MLA</option>
+              </select>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Información de la Publicación</label>
-              <Textarea
-                value={citationInput}
-                onChange={(e) => setCitationInput(e.target.value)}
-                placeholder="Autor(es), año, título, revista/libro, etc.&#10;Ejemplo: Smith, J. (2024). Research Paper. Journal Name, 10, 1-15."
-                className="min-h-[100px]"
-              />
-              <p className="text-xs text-muted-foreground">
-                Tip: Puedes pegar un texto o DOI, el sistema intentará extraer la información.
-              </p>
-            </div>
+            <textarea
+              className="w-full border rounded p-2 text-sm bg-background min-h-[100px]"
+              placeholder="Datos de la fuente..."
+              value={citationInput}
+              onChange={(e) => setCitationInput(e.target.value)}
+            />
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setIsCitationDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleGenerateCitation}>
-              <Quote className="mr-2 h-4 w-4" />
-              Generar Cita
-            </Button>
+            <Button onClick={executeCitationInsert}>Insertar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <PanelGroup direction={isMobile ? "vertical" : "horizontal"} className="h-full">
-        <Panel defaultSize={50} minSize={30}>
-          <div className="flex flex-col h-full p-1.5 lg:p-3 gap-0.5">
-            {/* Compact Header with Toggle Buttons */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm md:text-base font-semibold">Editor LaTeX</h3>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => setShowToolbar(!showToolbar)}
-                  title={showToolbar ? "Ocultar herramientas" : "Mostrar herramientas"}
-                >
-                  <Wrench className="h-3 w-3 mr-1" />
-                  {showToolbar ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => setShowStats(!showStats)}
-                  title={showStats ? "Ocultar estadísticas" : "Mostrar estadísticas"}
-                >
-                  <BarChart className="h-3 w-3 mr-1" />
-                  {showStats ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => setShowAiBar(!showAiBar)}
-                  title={showAiBar ? "Ocultar asistente IA" : "Mostrar asistente IA"}
-                >
-                  <Wand2 className="h-3 w-3 mr-1" />
-                  {showAiBar ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                </Button>
-              </div>
-            </div>
-
-            {/* Collapsible Toolbar */}
-            {showToolbar && (
-              <div className="flex items-center gap-0.5 lg:gap-1 flex-wrap py-0.5 border-b">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="text-xs md:text-sm h-7">
-                      <BookMarked className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                      <span className="hidden sm:inline">Plantillas</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-80 max-h-96 overflow-y-auto">
-                    {/* Academic Templates */}
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                      Académicas
-                    </div>
-                    {latexTemplates
-                      .filter(t => t.category === "Academic")
-                      .map((template) => (
-                        <DropdownMenuItem
-                          key={template.name}
-                          onSelect={() => handleTemplateSelect(template)}
-                          className="flex flex-col items-start py-2"
-                        >
-                          <div className="font-medium">{template.name}</div>
-                          <div className="text-xs text-muted-foreground">{template.description}</div>
-                        </DropdownMenuItem>
-                      ))}
-
-                    <DropdownMenuSeparator />
-
-                    {/* Professional Templates */}
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                      Profesionales
-                    </div>
-                    {latexTemplates
-                      .filter(t => t.category === "Professional")
-                      .map((template) => (
-                        <DropdownMenuItem
-                          key={template.name}
-                          onSelect={() => handleTemplateSelect(template)}
-                          className="flex flex-col items-start py-2"
-                        >
-                          <div className="font-medium">{template.name}</div>
-                          <div className="text-xs text-muted-foreground">{template.description}</div>
-                        </DropdownMenuItem>
-                      ))}
-
-                    <DropdownMenuSeparator />
-
-                    {/* Reports & Books */}
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                      Reportes y Libros
-                    </div>
-                    {latexTemplates
-                      .filter(t => t.category === "Reports & Books")
-                      .map((template) => (
-                        <DropdownMenuItem
-                          key={template.name}
-                          onSelect={() => handleTemplateSelect(template)}
-                          className="flex flex-col items-start py-2"
-                        >
-                          <div className="font-medium">{template.name}</div>
-                          <div className="text-xs text-muted-foreground">{template.description}</div>
-                        </DropdownMenuItem>
-                      ))}
-
-                    <DropdownMenuSeparator />
-
-                    {/* Presentations */}
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                      Presentaciones
-                    </div>
-                    {latexTemplates
-                      .filter(t => t.category === "Presentations")
-                      .map((template) => (
-                        <DropdownMenuItem
-                          key={template.name}
-                          onSelect={() => handleTemplateSelect(template)}
-                          className="flex flex-col items-start py-2"
-                        >
-                          <div className="font-medium">{template.name}</div>
-                          <div className="text-xs text-muted-foreground">{template.description}</div>
-                        </DropdownMenuItem>
-                      ))}
-
-                    {customTemplates.length > 0 && <DropdownMenuSeparator />}
-
-                    {/* Custom Templates */}
-                    {customTemplates.length > 0 && (
-                      <>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                          Mis Plantillas
-                        </div>
-                        {customTemplates.map((template, index) => (
-                          <DropdownMenuItem
-                            key={template.name}
-                            onSelect={(e) => {
-                              e.preventDefault();
-                            }}
-                            className="flex items-center justify-between py-2"
-                          >
-                            <div
-                              className="flex flex-col items-start flex-1 cursor-pointer"
-                              onClick={() => handleTemplateSelect(template)}
-                            >
-                              <div className="font-medium">{template.name}</div>
-                              {template.description && (
-                                <div className="text-xs text-muted-foreground">{template.description}</div>
-                              )}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm(`¿Eliminar plantilla "${template.name}"?`)) {
-                                  const updated = customTemplates.filter((_, i) => i !== index);
-                                  setCustomTemplates(updated);
-                                  localStorage.setItem('custom_latex_templates', JSON.stringify(updated));
-                                  toast({ title: "Plantilla eliminada" });
-                                }
-                              }}
-                            >
-                              🗑️
-                            </Button>
-                          </DropdownMenuItem>
-                        ))}
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button variant="outline" size="sm" className="text-xs md:text-sm" onClick={() => setIsSaveDialogOpen(true)}>
-                  <Save className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                  <span className="hidden md:inline">Guardar</span>
-                </Button>
-                <Button variant="outline" size="sm" className="text-xs md:text-sm" onClick={() => setIsCitationDialogOpen(true)}>
-                  <Quote className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                  <span className="hidden md:inline">Cita</span>
-                </Button>
-                <Button onClick={handlePreview} disabled={isLoading} size="sm" variant="outline" className="text-xs md:text-sm">
-                  <Eye className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                  <span className="hidden lg:inline">Compilar</span>
-                </Button>
-              </div>
-            )}
-
-            {/* Collapsible Document Statistics Bar */}
-            {showStats && (
-              <div className="flex items-center gap-2 lg:gap-4 text-[11px] lg:text-xs text-muted-foreground border-t border-b py-0.5">
-                <div className="flex items-center gap-1">
-                  <BarChart className="h-3 w-3" />
-                  <span className="font-medium">{wordCount}</span> palabras
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="font-medium">{lineCount}</span> líneas
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="font-medium">{charCount}</span> caracteres
-                </div>
-                <div className="ml-auto">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2"
-                    onClick={() => setShowSidebar(!showSidebar)}
-                    title={showSidebar ? "Ocultar panel" : "Mostrar panel"}
-                  >
-                    {showSidebar ? <PanelLeftClose className="h-3 w-3" /> : <PanelLeft className="h-3 w-3" />}
-                  </Button>
-                </div>
-              </div>
-            )}
-            {/* Editor + Sidebar Container */}
-            <div className="relative flex-grow h-full overflow-hidden flex gap-2">
-              {/* Sidebar Panel - Outline & Symbols */}
-              {showSidebar && !isMobile && (
-                <div className="w-48 flex-shrink-0 border rounded-md bg-card flex flex-col overflow-hidden">
-                  <DocumentOutline text={text} onNavigate={handleNavigateToLine} />
-                  <SymbolPicker onInsert={handleInsertSymbol} />
-                </div>
-              )}
-
-              {/* Monaco Editor */}
-              <div className="flex-grow border rounded-md overflow-hidden">
-                <Editor
-                  height="100%"
-                  defaultLanguage="latex"
-                  theme="vs-dark"
-                  value={text}
-                  onChange={(value) => setText(value || '')}
-                  onMount={handleEditorDidMount}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    wordWrap: 'on',
-                    scrollBeyondLastLine: false,
-                    automaticLayout: true,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Collapsible AI Instruction Bar */}
-            {showAiBar && (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="text"
-                  placeholder="Ej: 'Crea un resumen del documento X', 'Expande el párrafo anterior', 'Corrige la gramática'..."
-                  className="flex-1 h-8 text-sm"
-                  value={instruction}
-                  onChange={(e) => setInstruction(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                />
-                <Button onClick={handleSubmit} disabled={isLoading} size="sm" className="h-8 w-8 p-0">
-                  <Wand2 className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-        </Panel >
-        <PanelResizeHandle className={isMobile ? "h-2 bg-border hover:bg-primary transition-colors" : "w-2 bg-border hover:bg-primary transition-colors"} />
-        <Panel defaultSize={50}>
-          <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between p-2 md:p-4 border-b">
-              <h3 className="text-sm md:text-lg font-semibold">Vista Previa</h3>
-              <Button onClick={handleDownload} disabled={!pdfFile || isLoading} size="sm" variant="outline" className="text-xs md:text-sm">
-                <Download className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                <span className="hidden md:inline">Descargar PDF</span>
-              </Button>
-            </div>
-            <div ref={pdfPreviewRef} onScroll={handlePdfScroll} className="h-full overflow-y-auto bg-secondary p-4">
-              <PreviewContent />
-            </div>
-          </div>
-        </Panel>
-      </PanelGroup >
-    </>
+    </div>
   );
 }

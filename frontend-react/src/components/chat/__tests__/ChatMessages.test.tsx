@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { ChatMessages } from '../chat-messages';
 import { ChatMessage } from '@/lib/api-client';
 
@@ -21,7 +22,7 @@ describe('ChatMessages', () => {
         messages={messages}
         messagesEndRef={messagesEndRef}
         copiedMessageIndex={null}
-        handleCopy={() => {}}
+        handleCopy={() => { }}
       />
     );
     expect(screen.getByText('Hello')).toBeInTheDocument();
@@ -35,7 +36,7 @@ describe('ChatMessages', () => {
         messages={messages}
         messagesEndRef={messagesEndRef}
         copiedMessageIndex={null}
-        handleCopy={() => {}}
+        handleCopy={() => { }}
       />
     );
     expect(screen.getByText('Ver Fuente')).toBeInTheDocument();

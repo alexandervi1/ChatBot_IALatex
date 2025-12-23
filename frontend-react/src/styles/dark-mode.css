@@ -1,0 +1,213 @@
+/**
+ * Dark Mode CSS Variables
+ * 
+ * Complete dark mode color scheme for LaTeX Copilot.
+ * Import this file in your main CSS/layout.
+ */
+
+:root {
+    /* Light mode colors */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+
+    --radius: 0.5rem;
+
+    /* Editor specific */
+    --editor-bg: 0 0% 100%;
+    --editor-line-number: 215.4 16.3% 56.9%;
+    --editor-selection: 214 95% 90%;
+    --editor-cursor: 221.2 83.2% 53.3%;
+    --editor-highlight-line: 210 40% 98%;
+
+    /* Code syntax */
+    --syntax-keyword: 262 83% 58%;
+    --syntax-string: 142 71% 45%;
+    --syntax-number: 27 96% 55%;
+    --syntax-comment: 215.4 16.3% 56.9%;
+    --syntax-function: 199 89% 48%;
+    --syntax-variable: 222.2 84% 4.9%;
+    --syntax-operator: 0 84.2% 60.2%;
+
+    /* LaTeX specific */
+    --latex-command: 262 83% 58%;
+    --latex-environment: 199 89% 48%;
+    --latex-math: 142 71% 45%;
+    --latex-brace: 38 92% 50%;
+
+    /* Collaboration */
+    --collaborator-1: 339 82% 52%;
+    --collaborator-2: 199 89% 48%;
+    --collaborator-3: 142 71% 45%;
+    --collaborator-4: 27 96% 55%;
+    --collaborator-5: 262 83% 58%;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.dark {
+    /* Dark mode colors */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 10%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+
+    /* Editor specific - dark */
+    --editor-bg: 220 13% 10%;
+    --editor-line-number: 215 20.2% 55.1%;
+    --editor-selection: 217.2 32.6% 27.5%;
+    --editor-cursor: 217.2 91.2% 59.8%;
+    --editor-highlight-line: 217.2 32.6% 12.5%;
+
+    /* Code syntax - dark (adjusted for visibility) */
+    --syntax-keyword: 265 89% 78%;
+    --syntax-string: 95 38% 62%;
+    --syntax-number: 29 67% 65%;
+    --syntax-comment: 215 20.2% 55.1%;
+    --syntax-function: 187 92% 69%;
+    --syntax-variable: 210 40% 98%;
+    --syntax-operator: 0 62.8% 60.6%;
+
+    /* LaTeX specific - dark */
+    --latex-command: 265 89% 78%;
+    --latex-environment: 187 92% 69%;
+    --latex-math: 95 38% 62%;
+    --latex-brace: 38 92% 60%;
+
+    /* Shadows - dark */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+}
+
+/* Monaco Editor Dark Theme Override */
+.dark .monaco-editor {
+    --vscode-editor-background: hsl(var(--editor-bg));
+    --vscode-editor-foreground: hsl(var(--foreground));
+    --vscode-editorLineNumber-foreground: hsl(var(--editor-line-number));
+    --vscode-editor-selectionBackground: hsl(var(--editor-selection));
+    --vscode-editorCursor-foreground: hsl(var(--editor-cursor));
+    --vscode-editor-lineHighlightBackground: hsl(var(--editor-highlight-line));
+}
+
+/* PDF Preview Dark Mode */
+.dark .pdf-preview {
+    filter: invert(0.88) hue-rotate(180deg);
+}
+
+.dark .pdf-preview img {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+/* Scrollbar Dark Mode */
+.dark ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 5px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 5px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+}
+
+/* Selection colors */
+::selection {
+    background: hsl(var(--primary) / 0.3);
+    color: hsl(var(--foreground));
+}
+
+.dark ::selection {
+    background: hsl(var(--primary) / 0.4);
+}
+
+/* Focus visible */
+:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

@@ -14,8 +14,7 @@ import {
   Palette,
   Check,
   HelpCircle,
-  FileCode,
-  Download
+  FileCode
 } from "lucide-react";
 
 interface UserManualProps {

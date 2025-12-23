@@ -261,3 +261,54 @@ async def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+# ============================================================================
+# WebSocket Authentication
+# ============================================================================
+
+async def get_current_user_ws(token: str, db: Session) -> models.User:
+    """
+    Authenticate a user from a WebSocket connection using JWT token.
+    
+    This is used for WebSocket connections where we can't use the standard
+    OAuth2 dependency injection.
+    
+    Args:
+        token: JWT access token from query parameter
+        db: Database session
+        
+    Returns:
+        Authenticated User object
+        
+    Raises:
+        HTTPException: If token is invalid or user not found
+    """
+    from jose import jwt, JWTError
+    from config import AuthConfig
+    
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(
+            token, 
+            AuthConfig.SECRET_KEY, 
+            algorithms=[AuthConfig.ALGORITHM]
+        )
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = db.query(models.User).filter(models.User.email == email).first()
+    
+    if user is None:
+        raise credentials_exception
+    
+    return user
+

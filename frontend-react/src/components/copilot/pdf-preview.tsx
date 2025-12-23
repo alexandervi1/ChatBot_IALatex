@@ -12,6 +12,7 @@ interface PdfPreviewProps {
     onDocumentLoadSuccess: (numPages: number) => void;
     onLoadError: (error: string) => void;
     onScroll: (event: React.UIEvent<HTMLDivElement>) => void;
+    zoomLevel: number | 'auto' | 'page-fit';
 }
 
 /**
@@ -26,7 +27,26 @@ export const PdfPreview = forwardRef<HTMLDivElement, PdfPreviewProps>(({
     onDocumentLoadSuccess,
     onLoadError,
     onScroll,
+    zoomLevel,
 }, ref) => {
+
+    // Helper to calculate page width/height based on zoom setting
+    const getPageProps = (containerWidth: number, containerHeight: number) => {
+        if (zoomLevel === 'auto') {
+            return { width: containerWidth - 32 }; // Default: Fil width minus padding
+        }
+        if (zoomLevel === 'page-fit') {
+            return { height: containerHeight - 32 }; // Fit height
+        }
+        if (typeof zoomLevel === 'number') {
+            // Manual zoom. Assuming 100% is roughly standard width (e.g. 800px) or just scale if library supported it.
+            // React-pdf 'width' prop sets the width in pixels.
+            // Let's assume 800px is 100% for a baseline.
+            return { width: 800 * (zoomLevel / 100) };
+        }
+        return { width: containerWidth - 32 };
+    };
+
     const renderContent = () => {
         switch (previewStatus) {
             case 'loading':
@@ -48,20 +68,26 @@ export const PdfPreview = forwardRef<HTMLDivElement, PdfPreviewProps>(({
                 );
             case 'success':
                 if (pdfFile) {
+                    // Safe reference access
+                    const container = (ref as React.RefObject<HTMLDivElement>)?.current;
+                    const containerWidth = container?.clientWidth || 800;
+                    const containerHeight = container?.clientHeight || 600;
+                    const pageProps = getPageProps(containerWidth, containerHeight);
+
                     return (
                         <Document
                             file={pdfFile}
                             onLoadSuccess={({ numPages }) => onDocumentLoadSuccess(numPages)}
                             onLoadError={(error) => onLoadError(`Error al cargar el PDF: ${error.message}`)}
+                            className="flex flex-col items-center"
                         >
                             {Array.from(new Array(numPages), (_, index) => (
                                 <Page
                                     key={`page_${index + 1}`}
                                     pageNumber={index + 1}
                                     renderTextLayer={false}
-                                    width={(ref as React.RefObject<HTMLDivElement>)?.current?.clientWidth
-                                        ? (ref as React.RefObject<HTMLDivElement>).current!.clientWidth - 32
-                                        : undefined}
+                                    className="my-2 shadow-sm border bg-white"
+                                    {...pageProps}
                                 />
                             ))}
                         </Document>
@@ -80,7 +106,7 @@ export const PdfPreview = forwardRef<HTMLDivElement, PdfPreviewProps>(({
     };
 
     return (
-        <div ref={ref} onScroll={onScroll} className="h-full overflow-y-auto bg-secondary p-4">
+        <div ref={ref} onScroll={onScroll} className="h-full overflow-y-auto bg-secondary/50 p-4">
             {renderContent()}
         </div>
     );

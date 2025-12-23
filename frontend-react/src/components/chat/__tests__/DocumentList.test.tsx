@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { DocumentList } from '../document-list';
 
 const documents = [
@@ -9,33 +10,27 @@ const documents = [
 ];
 
 describe('DocumentList', () => {
+  const defaultProps = {
+    documents,
+    uploadStatus: '',
+    deletingId: null,
+    docSearchTerm: '',
+    setDocSearchTerm: jest.fn(),
+    handleUploadClick: jest.fn(),
+    handleDocSelectionChange: jest.fn(),
+    handleDelete: jest.fn(),
+    fetchDocuments: jest.fn(),
+  };
+
   it('renders the list of documents', () => {
-    render(
-      <DocumentList
-        documents={documents}
-        uploadStatus=""
-        deletingId={null}
-        handleUploadClick={() => {}}
-        handleDocSelectionChange={() => {}}
-        handleDelete={() => {}}
-      />
-    );
+    render(<DocumentList {...defaultProps} />);
     expect(screen.getByText('doc1.pdf')).toBeInTheDocument();
     expect(screen.getByText('doc2.pdf')).toBeInTheDocument();
   });
 
   it('calls the delete handler when the delete button is clicked', () => {
     const handleDelete = jest.fn();
-    render(
-      <DocumentList
-        documents={documents}
-        uploadStatus=""
-        deletingId={null}
-        handleUploadClick={() => {}}
-        handleDocSelectionChange={() => {}}
-        handleDelete={handleDelete}
-      />
-    );
+    render(<DocumentList {...defaultProps} handleDelete={handleDelete} />);
     fireEvent.click(screen.getByTestId('delete-button-1'));
     expect(handleDelete).toHaveBeenCalledWith(1, 'doc1.pdf');
   });
