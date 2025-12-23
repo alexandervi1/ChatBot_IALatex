@@ -369,6 +369,7 @@ export function CopilotEditor({ text, setText, instruction, setInstruction, hand
       <EditorToolbar
         onSaveTemplate={() => setIsSaveDialogOpen(true)}
         onDownloadPdf={handleDownload}
+        onCompile={handlePreview}
         onDownloadSource={() => {
           const blob = new Blob([text], { type: 'text/plain' });
           const url = URL.createObjectURL(blob);

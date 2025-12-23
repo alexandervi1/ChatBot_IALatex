@@ -28,6 +28,7 @@ import {
     FileText,
     ScanText,
     Eye,
+    Play,
     List,
     ZoomIn,
     ChevronDown,
@@ -39,6 +40,7 @@ export interface EditorToolbarProps {
     onSaveTemplate: () => void;
     onDownloadPdf: () => void;
     onDownloadSource: () => void;
+    onCompile: () => void;
     onUndo?: () => void;
     onRedo?: () => void;
     onFormat?: () => void;
@@ -56,6 +58,7 @@ export function EditorToolbar({
     onSaveTemplate,
     onDownloadPdf,
     onDownloadSource,
+    onCompile,
     onUndo,
     onRedo,
     onFormat,
@@ -220,9 +223,9 @@ export function EditorToolbar({
                             variant="default" // Primary Action
                             size="sm"
                             className="h-8 px-3 mr-2 bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={onTogglePreview}
+                            onClick={onCompile}
                         >
-                            <Eye className="h-4 w-4 mr-2" /> Compilar
+                            <Play className="h-4 w-4 mr-2" /> Compilar
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>Compilar y Visualizar</TooltipContent>
