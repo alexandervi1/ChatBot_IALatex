@@ -316,6 +316,84 @@ export const getProviders = (): Promise<ProvidersResponse> => {
   }).then(response => handleResponse<ProvidersResponse>(response));
 };
 
+// --- Ollama Types ---
+export interface OllamaInstalledModel {
+  name: string;
+  size: number;
+  modified: string;
+}
+
+export interface OllamaStatusResponse {
+  available: boolean;
+  installed_models: OllamaInstalledModel[];
+  recommended_models: AIModel[];
+}
+
+export interface OllamaPullProgress {
+  status?: string;
+  digest?: string;
+  total?: number;
+  completed?: number;
+  error?: string;
+}
+
+// --- Ollama Endpoints ---
+
+/**
+ * Check if Ollama is running and get installed models.
+ */
+export const getOllamaStatus = (): Promise<OllamaStatusResponse> => {
+  return fetchWithRetry(`${API_BASE_URL}/providers/ollama/status`, {
+    method: 'GET',
+    headers: getHeaders(),
+  }).then(response => handleResponse<OllamaStatusResponse>(response));
+};
+
+/**
+ * Pull/download an Ollama model with streaming progress.
+ * @param modelName - Model to download (e.g., "qwen2.5:3b")
+ * @param onProgress - Callback for progress updates
+ */
+export async function pullOllamaModel(
+  modelName: string,
+  onProgress?: (progress: OllamaPullProgress) => void
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/providers/ollama/pull/${modelName}`, {
+    method: 'POST',
+    headers: getHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to pull model: ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) return;
+
+  const decoder = new TextDecoder();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const text = decoder.decode(value, { stream: true });
+      const lines = text.split('\n').filter(Boolean);
+
+      for (const line of lines) {
+        try {
+          const data = JSON.parse(line) as OllamaPullProgress;
+          if (onProgress) onProgress(data);
+          if (data.error) throw new Error(data.error);
+        } catch (e) {
+          // Skip non-JSON lines
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 // --- Auth Endpoints ---
 
 export const login = (email: string, password: string): Promise<AuthToken> => {

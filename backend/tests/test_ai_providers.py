@@ -17,6 +17,7 @@ from services.ai_providers import (
     GeminiProvider,
     OpenAIProvider,
     AnthropicProvider,
+    OllamaProvider,
     ProviderFactory,
 )
 
@@ -98,6 +99,64 @@ class TestAnthropicProvider:
         assert any("claude-3" in mid for mid in model_ids)
 
 
+@pytest.fixture
+def ollama_provider():
+    return OllamaProvider()
+
+
+class TestOllamaProvider:
+    """Tests for Ollama local inference provider."""
+    
+    def test_properties(self, ollama_provider):
+        """Test provider properties are correct."""
+        assert ollama_provider.name == "Ollama (Local)"
+        assert ollama_provider.provider_id == "ollama"
+        assert ollama_provider.default_model == "qwen2.5:3b"
+        assert len(ollama_provider.models) >= 4
+        assert "ollama.com" in ollama_provider.api_key_url
+        assert ollama_provider.api_key_placeholder == "local"
+        assert len(ollama_provider.setup_steps) == 4
+    
+    def test_models_structure(self, ollama_provider):
+        """Test models have correct structure."""
+        for model in ollama_provider.models:
+            assert "id" in model
+            assert "name" in model
+            assert isinstance(model["id"], str)
+            assert isinstance(model["name"], str)
+    
+    def test_lightweight_models_included(self, ollama_provider):
+        """Test lightweight models are available."""
+        model_ids = [m["id"] for m in ollama_provider.models]
+        assert "qwen2.5:3b" in model_ids
+        assert "gemma2:2b" in model_ids
+    
+    def test_timeout_for_model(self, ollama_provider):
+        """Test adaptive timeout based on model size."""
+        # Tiny models should have lower timeout
+        tiny_timeout = ollama_provider._get_timeout_for_model("gemma2:2b")
+        # Medium models should have higher timeout
+        medium_timeout = ollama_provider._get_timeout_for_model("mistral:7b")
+        assert tiny_timeout < medium_timeout
+    
+    @pytest.mark.asyncio
+    async def test_generate_stream_connection_error(self, ollama_provider):
+        """Test graceful handling when Ollama is not running."""
+        # Set an invalid URL to force connection error
+        ollama_provider._base_url = "http://localhost:99999"
+        
+        chunks = []
+        async for chunk in ollama_provider.generate_stream(
+            prompt="Test",
+            api_key="local",
+        ):
+            chunks.append(chunk)
+        
+        # Should return error message about connection
+        assert len(chunks) > 0
+        assert any("conectar" in c.lower() or "error" in c.lower() for c in chunks)
+
+
 
 
 
@@ -124,6 +183,12 @@ class TestProviderFactory:
         assert isinstance(provider, AnthropicProvider)
         assert provider.provider_id == "anthropic"
     
+    def test_get_ollama_provider(self):
+        """Test getting Ollama provider by ID."""
+        provider = ProviderFactory.get_provider("ollama")
+        assert isinstance(provider, OllamaProvider)
+        assert provider.provider_id == "ollama"
+    
     def test_case_insensitive(self):
         """Test provider lookup is case-insensitive."""
         provider1 = ProviderFactory.get_provider("GEMINI")
@@ -141,12 +206,13 @@ class TestProviderFactory:
         """Test listing all providers."""
         providers = ProviderFactory.list_providers()
         
-        assert len(providers) >= 3  # gemini, openai, anthropic
+        assert len(providers) >= 5  # gemini, openai, anthropic, cerebras, ollama
         
         provider_ids = [p["id"] for p in providers]
         assert "gemini" in provider_ids
         assert "openai" in provider_ids
         assert "anthropic" in provider_ids
+        assert "ollama" in provider_ids
         
         # Each provider should have required fields
         for provider in providers:
@@ -266,7 +332,7 @@ class TestProviderInheritance:
             GeminiProvider(),
             OpenAIProvider(),
             AnthropicProvider(),
-
+            OllamaProvider(),
         ]
         
         for provider in providers:

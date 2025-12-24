@@ -42,7 +42,7 @@ Este es un **chatbot inteligente** diseñado para consultar documentos académic
 
 - **Chat con tus documentos**: Sube PDFs, Word, TXT y haz preguntas sobre su contenido
 - **Editor LaTeX con IA**: Escribe documentos académicos con asistencia de IA
-- **Múltiples proveedores de IA**: Usa Gemini, OpenAI o Claude
+- **Múltiples proveedores de IA**: Usa Gemini, OpenAI, Claude o **modelos locales con Ollama**
 - **Privacidad**: Datos encriptados y seguridad empresarial
 
 ### ¿Para quién es?
@@ -321,6 +321,10 @@ Ingresa email y contraseña cuando se te solicite. El usuario se creará con rol
 | **Google Gemini** | gemini-2.5-flash, gemini-2.5-pro | ✅ [Obtener](https://aistudio.google.com/app/apikey) | Gratis con límites |
 | **OpenAI** | gpt-4o-mini, gpt-4o, gpt-4-turbo | ✅ [Obtener](https://platform.openai.com/api-keys) | Pago por uso |
 | **Anthropic Claude** | claude-3-5-sonnet, claude-3-haiku | ✅ [Obtener](https://console.anthropic.com/settings/keys) | Pago por uso |
+| **Cerebras** | llama-3.3-70b, llama3.1-8b, qwen-3-32b | ✅ [Obtener](https://cloud.cerebras.ai) | Gratis con límites |
+| **Ollama (Local)** ✨ | qwen2.5:3b, phi4-mini, llama3.2:3b, gemma2:2b | ❌ No requiere | **Gratis** (local) |
+
+> 💡 **Ollama es opcional**: No viene incluido en la instalación. Solo descárgalo si quieres ejecutar modelos localmente sin internet ni API keys. [Ver instrucciones](#-uso-offline-con-ollama-opcional)
 
 ---
 
@@ -333,7 +337,7 @@ Ingresa email y contraseña cuando se te solicite. El usuario se creará con rol
 - **Filtrado por Fuentes**: Busca solo en documentos seleccionados
 
 ### 💬 Chat Inteligente
-- **4 Proveedores de IA**: Gemini, Cerebras, OpenAI, Anthropic
+- **5 Proveedores de IA**: Gemini, Cerebras, OpenAI, Anthropic, **Ollama (local)**
 - **Slash Commands**: `/resumen`, `/traducir`, `/explicar`, `/tabla`, `/puntos`, `/analizar`
 - **Diagramas Mermaid**: Genera automáticamente diagramas UML, flujos, ER, Gantt
 - **Copy Código**: Botón copiar en bloques de código con feedback visual
@@ -710,7 +714,26 @@ Sí. Las API keys se almacenan encriptadas y los proveedores (Gemini/OpenAI) tie
 
 ### ¿Funciona offline?
 
-**No.** El sistema requiere conexión para interactuar con los proveedores de IA (Gemini, OpenAI, Anthropic).
+**Sí, con Ollama (opcional).** Si quieres usar IA sin internet, puedes instalar Ollama por separado:
+
+```bash
+# 1. Instalar Ollama (solo si quieres modelos locales)
+winget install Ollama.Ollama
+
+# 2. Descargar un modelo ligero
+ollama pull qwen2.5:3b
+
+# 3. Seleccionar "Ollama (Local)" en la app
+```
+
+> ⚠️ **Ollama NO es obligatorio** - La app funciona perfectamente con los proveedores en la nube (Gemini, OpenAI, etc.). Solo instala Ollama si quieres privacidad total o no tienes internet.
+
+**Modelos recomendados para PCs estándar (4-8GB RAM):**
+| Modelo | Tamaño | Uso |
+|--------|--------|-----|
+| `gemma2:2b` | ~1.5GB | PCs básicos |
+| `qwen2.5:3b` | ~2GB | Mejor en español |
+| `llama3.2:3b` | ~2GB | Balance general |
 
 ### ¿Cuántos documentos puedo subir?
 

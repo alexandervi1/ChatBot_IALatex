@@ -478,6 +478,176 @@ class CerebrasProvider(AIProvider):
                 yield "Ocurrió un error de conexión con Cerebras."
 
 
+class OllamaProvider(AIProvider):
+    """
+    Ollama local inference provider.
+    
+    Optimized for running lightweight models on consumer hardware.
+    Supports automatic health checks and dynamic model detection.
+    """
+    
+    # Modelos recomendados para PCs de gama media (4-8GB RAM/VRAM)
+    LIGHTWEIGHT_MODELS = [
+        {"id": "qwen2.5:3b", "name": "Qwen 2.5 (3B) - Español/Inglés", "size": "small"},
+        {"id": "phi4-mini", "name": "Phi-4 Mini - Microsoft", "size": "small"},
+        {"id": "llama3.2:3b", "name": "Llama 3.2 (3B) - Meta", "size": "small"},
+        {"id": "gemma2:2b", "name": "Gemma 2 (2B) - Ultraligero", "size": "tiny"},
+        {"id": "mistral:7b", "name": "Mistral (7B) - Avanzado", "size": "medium"},
+        {"id": "llama3.2:1b", "name": "Llama 3.2 (1B) - Mínimo", "size": "tiny"},
+    ]
+    
+    # Timeouts adaptativos según tamaño del modelo
+    TIMEOUT_BY_SIZE = {
+        "tiny": 60,    # 1-2B params
+        "small": 90,   # 3-4B params
+        "medium": 120, # 7-8B params
+    }
+    
+    def __init__(self):
+        import os
+        self._base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        self._is_available: Optional[bool] = None
+    
+    @property
+    def name(self) -> str:
+        return "Ollama (Local)"
+    
+    @property
+    def provider_id(self) -> str:
+        return "ollama"
+    
+    @property
+    def default_model(self) -> str:
+        return "qwen2.5:3b"
+    
+    @property
+    def models(self) -> List[Dict[str, str]]:
+        return [{"id": m["id"], "name": m["name"]} for m in self.LIGHTWEIGHT_MODELS]
+    
+    @property
+    def api_key_url(self) -> str:
+        return "https://ollama.com/download"
+    
+    @property
+    def api_key_placeholder(self) -> str:
+        return "local"
+    
+    @property
+    def setup_steps(self) -> List[str]:
+        return [
+            "Descarga Ollama desde ollama.com",
+            "Instala y ejecuta Ollama",
+            "Abre terminal y ejecuta: ollama pull qwen2.5:3b",
+            "Escribe 'local' abajo para activar",
+        ]
+    
+    def _get_timeout_for_model(self, model: str) -> int:
+        """Get adaptive timeout based on model size."""
+        for m in self.LIGHTWEIGHT_MODELS:
+            if m["id"] == model:
+                return self.TIMEOUT_BY_SIZE.get(m.get("size", "small"), 90)
+        return 90  # Default timeout
+    
+    async def check_health(self) -> bool:
+        """Check if Ollama server is running and accessible."""
+        if self._is_available is not None:
+            return self._is_available
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(f"{self._base_url}/api/tags", timeout=5)
+                self._is_available = response.status_code == 200
+                if self._is_available:
+                    logger.info("Ollama server detected and available")
+                return self._is_available
+            except Exception as e:
+                logger.debug(f"Ollama not available: {e}")
+                self._is_available = False
+                return False
+    
+    async def list_installed_models(self) -> List[str]:
+        """Get list of models installed in Ollama."""
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(f"{self._base_url}/api/tags", timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    return [m["name"] for m in data.get("models", [])]
+            except Exception as e:
+                logger.debug(f"Could not list Ollama models: {e}")
+        return []
+    
+    async def generate_stream(
+        self,
+        prompt: str,
+        api_key: str,  # Ignored for local inference
+        temperature: float = 0.3,
+        model: Optional[str] = None,
+        on_token_usage: Any = None
+    ) -> AsyncGenerator[str, None]:
+        model = model or self.default_model
+        url = f"{self._base_url}/api/generate"
+        timeout = self._get_timeout_for_model(model)
+        
+        data = {
+            "model": model,
+            "prompt": prompt,
+            "stream": True,
+            "options": {
+                "temperature": temperature,
+            }
+        }
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                async with client.stream(
+                    "POST", 
+                    url, 
+                    json=data, 
+                    timeout=timeout
+                ) as response:
+                    logger.info(f"Ollama API Response Status: {response.status_code}")
+                    
+                    if response.status_code == 404:
+                        yield f"Modelo '{model}' no encontrado. Ejecuta: ollama pull {model}"
+                        return
+                    
+                    if response.status_code != 200:
+                        error_text = await response.aread()
+                        logger.error(f"Error Ollama API: {response.status_code} - {error_text}")
+                        yield f"Error de Ollama: {response.status_code}. ¿Está Ollama ejecutándose?"
+                        return
+                    
+                    total_tokens = 0
+                    async for line in response.aiter_lines():
+                        if line:
+                            try:
+                                chunk_data = json.loads(line)
+                                
+                                # Stream response text
+                                if "response" in chunk_data:
+                                    yield chunk_data["response"]
+                                
+                                # Track token usage from final message
+                                if chunk_data.get("done", False):
+                                    total_tokens = chunk_data.get("eval_count", 0)
+                                    if on_token_usage and total_tokens > 0:
+                                        await on_token_usage(total_tokens)
+                                        
+                            except json.JSONDecodeError:
+                                continue
+                                
+            except httpx.ConnectError:
+                logger.error("Cannot connect to Ollama server")
+                yield "No se puede conectar a Ollama. Asegúrate de que esté ejecutándose (ollama serve)."
+            except httpx.TimeoutException:
+                logger.error(f"Ollama request timed out after {timeout}s")
+                yield f"Tiempo de espera agotado. El modelo puede ser muy grande para tu hardware."
+            except Exception as e:
+                logger.error(f"Exception in OllamaProvider: {e}", exc_info=True)
+                yield "Ocurrió un error con Ollama."
+
+
 class ProviderFactory:
     """Factory to get AI provider instances."""
     
@@ -486,6 +656,7 @@ class ProviderFactory:
         "openai": OpenAIProvider,
         "anthropic": AnthropicProvider,
         "cerebras": CerebrasProvider,
+        "ollama": OllamaProvider,
     }
     
     @classmethod

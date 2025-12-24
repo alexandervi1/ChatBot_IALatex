@@ -25,7 +25,7 @@ RUN wget -qO- "https://yihui.org/tinytex/install-bin-unix.sh" | sh -s - --admin 
 ENV PATH="/opt/TinyTeX/bin/x86_64-linux:/opt/TinyTeX/bin/aarch64-linux:${PATH}"
 
 RUN tlmgr path add && \
-    tlmgr install scheme-basic collection-latexrecommended collection-fontsrecommended collection-langspanish babel-spanish ieeetran
+    tlmgr install scheme-basic collection-latexrecommended collection-fontsrecommended collection-langspanish babel-spanish ieeetran enumitem
 
 WORKDIR /app
 
