@@ -1,0 +1,389 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- Paquetes ---
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+
+% --- Configuración de página ---
+\geometry{margin=2.5cm}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Chatbot IA con Copiloto LaTeX}
+\lhead{Conceptos Técnicos}
+\rfoot{Página \thepage}
+
+% --- Colores personalizados ---
+\definecolor{primaryblue}{RGB}{41, 128, 185}
+\definecolor{secondarygreen}{RGB}{39, 174, 96}
+\definecolor{accentorange}{RGB}{230, 126, 34}
+\definecolor{codebg}{RGB}{245, 245, 245}
+
+% --- Configuración de hyperref ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    citecolor=secondarygreen
+}
+
+% --- Configuración de listings ---
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{gray},
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
+
+% --- Cajas de información ---
+\newtcolorbox{conceptbox}[1][]{
+    colback=primaryblue!5,
+    colframe=primaryblue,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{importantbox}{
+    colback=accentorange!10,
+    colframe=accentorange,
+    fonttitle=\bfseries,
+    title=Importante
+}
+
+% --- Título ---
+\title{
+    \vspace{-2cm}
+    {\Huge \textcolor{primaryblue}{Conceptos Técnicos Fundamentales}}\\[0.5cm]
+    {\Large Embeddings, Chunks, RAG y Búsqueda Híbrida}\\[0.3cm]
+    {\large Chatbot IA con Copiloto LaTeX v4.2}
+}
+\author{Documentación Técnica para Exposición}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ============================================
+\section{Chunk (Fragmento de Texto)}
+% ============================================
+
+\begin{conceptbox}[Definición]
+Un \textbf{chunk} es un fragmento de texto de un documento largo, dividido en partes más pequeñas para poder procesarlo eficientemente.
+\end{conceptbox}
+
+\subsection{¿Por qué dividir en chunks?}
+
+\begin{itemize}
+    \item Los modelos de IA tienen \textbf{límites de texto} que pueden procesar
+    \item Es más fácil buscar en fragmentos pequeños que en documentos enteros
+    \item Permite encontrar la \textbf{parte específica} que responde una pregunta
+\end{itemize}
+
+\subsection{Ejemplo Visual}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.8]
+    % Documento original
+    \draw[fill=gray!20, rounded corners] (0,0) rectangle (10,3);
+    \node at (5,2.5) {\textbf{DOCUMENTO ORIGINAL (100 páginas)}};
+    \node[align=center] at (5,1.2) {\small La inteligencia artificial es la simulación de\\
+    \small procesos de inteligencia humana por parte de máquinas...};
+    
+    % Flecha
+    \draw[->, thick, primaryblue] (5,0) -- (5,-0.8);
+    \node[primaryblue] at (6.5,-0.4) {Chunking};
+    
+    % Chunks
+    \draw[fill=secondarygreen!20, rounded corners] (0,-3.5) rectangle (3,-1.2);
+    \node at (1.5,-1.5) {\footnotesize \textbf{CHUNK 1}};
+    \node[align=center] at (1.5,-2.5) {\tiny "La inteligencia\\ \tiny artificial es..."};
+    
+    \draw[fill=secondarygreen!20, rounded corners] (3.5,-3.5) rectangle (6.5,-1.2);
+    \node at (5,-1.5) {\footnotesize \textbf{CHUNK 2}};
+    \node[align=center] at (5,-2.5) {\tiny "incluyen el\\ \tiny aprendizaje..."};
+    
+    \draw[fill=secondarygreen!20, rounded corners] (7,-3.5) rectangle (10,-1.2);
+    \node at (8.5,-1.5) {\footnotesize \textbf{CHUNK 3}};
+    \node[align=center] at (8.5,-2.5) {\tiny "reconocimiento\\ \tiny de voz..."};
+\end{tikzpicture}
+\caption{Proceso de división de un documento en chunks}
+\end{figure}
+
+\subsection{Configuración en la Aplicación}
+
+\begin{itemize}
+    \item Tamaño de cada chunk: $\approx$ \textbf{1000 caracteres}
+    \item Se almacenan en la tabla \texttt{chunks} de PostgreSQL
+    \item Cada chunk tiene su propio \textbf{embedding} asociado
+\end{itemize}
+
+\newpage
+% ============================================
+\section{Embedding (Vector Semántico)}
+% ============================================
+
+\begin{conceptbox}[Definición]
+Un \textbf{embedding} es una representación numérica del significado de un texto. Es un vector de números que captura la ``esencia semántica'' de las palabras.
+\end{conceptbox}
+
+\subsection{¿Por qué convertir texto a números?}
+
+\begin{itemize}
+    \item Las computadoras \textbf{no entienden palabras}, solo números
+    \item Los números permiten \textbf{medir similitud matemáticamente}
+    \item Textos con significados parecidos $\rightarrow$ Vectores cercanos
+\end{itemize}
+
+\subsection{Representación Matemática}
+
+Un embedding transforma texto en un vector de $n$ dimensiones:
+
+\begin{equation}
+\text{``perro''} \xrightarrow{\text{SentenceTransformer}} \vec{v} = [0.23, -0.45, 0.78, \ldots, 0.34] \in \mathbb{R}^{384}
+\end{equation}
+
+\subsection{Similitud entre Embeddings}
+
+La similitud entre dos textos se calcula usando \textbf{similitud coseno}:
+
+\begin{equation}
+\text{sim}(\vec{a}, \vec{b}) = \frac{\vec{a} \cdot \vec{b}}{||\vec{a}|| \cdot ||\vec{b}||} = \frac{\sum_{i=1}^{n} a_i b_i}{\sqrt{\sum_{i=1}^{n} a_i^2} \cdot \sqrt{\sum_{i=1}^{n} b_i^2}}
+\end{equation}
+
+\begin{importantbox}
+\begin{itemize}
+    \item $\text{sim} \approx 1$ $\rightarrow$ Textos \textbf{muy similares}
+    \item $\text{sim} \approx 0$ $\rightarrow$ Textos \textbf{sin relación}
+    \item $\text{sim} \approx -1$ $\rightarrow$ Textos \textbf{opuestos}
+\end{itemize}
+\end{importantbox}
+
+\subsection{Ejemplo de Similitudes}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Comparación} & \textbf{Similitud} & \textbf{Interpretación} \\
+\midrule
+``perro'' vs ``gato'' & 0.92 & Muy similares (animales) \\
+``perro'' vs ``automóvil'' & 0.15 & Muy diferentes \\
+``rey - hombre + mujer'' & $\approx$ ``reina'' & ¡Captura relaciones! \\
+\bottomrule
+\end{tabular}
+\caption{Ejemplos de similitud coseno entre embeddings}
+\end{table}
+
+\subsection{Configuración en la Aplicación}
+
+\begin{itemize}
+    \item Modelo: \texttt{all-MiniLM-L6-v2} (Sentence Transformers)
+    \item Dimensiones: \textbf{384 números} por embedding
+    \item Almacenamiento: PostgreSQL con extensión \textbf{pgvector}
+\end{itemize}
+
+\newpage
+% ============================================
+\section{RAG (Retrieval-Augmented Generation)}
+% ============================================
+
+\begin{conceptbox}[Definición]
+\textbf{RAG} es una técnica que combina \textbf{búsqueda} (Retrieval) con \textbf{generación de IA} (Generation). En vez de que la IA invente respuestas, primero BUSCA información relevante y luego genera una respuesta basada en esa información.
+\end{conceptbox}
+
+\subsection{Comparación: Con RAG vs Sin RAG}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{6cm}p{6cm}}
+\toprule
+\textbf{Sin RAG (ChatGPT normal)} & \textbf{Con RAG (Esta aplicación)} \\
+\midrule
+$\times$ Puede inventar datos falsos & $\checkmark$ Solo usa TUS documentos \\
+$\times$ No conoce docs privados & $\checkmark$ Busca en tus PDFs \\
+$\times$ No puede citar fuentes & $\checkmark$ Muestra origen de la info \\
+$\times$ Conocimiento desactualizado & $\checkmark$ Conocimiento actualizado \\
+\bottomrule
+\end{tabular}
+\caption{Ventajas de RAG sobre chatbots tradicionales}
+\end{table}
+
+\subsection{Pipeline RAG (4 Pasos)}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.75, node distance=2.5cm]
+    % Nodos
+    \node[draw, rounded corners, fill=primaryblue!20, minimum width=2.5cm, minimum height=1cm] (pregunta) {Pregunta};
+    \node[draw, rounded corners, fill=secondarygreen!20, minimum width=2.5cm, minimum height=1cm, right of=pregunta] (embed) {1. Embedding};
+    \node[draw, rounded corners, fill=secondarygreen!20, minimum width=2.5cm, minimum height=1cm, right of=embed] (busqueda) {2. Búsqueda};
+    \node[draw, rounded corners, fill=secondarygreen!20, minimum width=2.5cm, minimum height=1cm, right of=busqueda] (rerank) {3. Re-ranking};
+    \node[draw, rounded corners, fill=accentorange!30, minimum width=2.5cm, minimum height=1cm, right of=rerank] (gen) {4. LLM};
+    \node[draw, rounded corners, fill=primaryblue!20, minimum width=2.5cm, minimum height=1cm, right of=gen] (resp) {Respuesta};
+    
+    % Flechas
+    \draw[->, thick] (pregunta) -- (embed);
+    \draw[->, thick] (embed) -- (busqueda);
+    \draw[->, thick] (busqueda) -- (rerank);
+    \draw[->, thick] (rerank) -- (gen);
+    \draw[->, thick] (gen) -- (resp);
+\end{tikzpicture}
+\caption{Pipeline RAG de 4 pasos}
+\end{figure}
+
+\subsection{Detalle de Cada Paso}
+
+\begin{enumerate}
+    \item \textbf{Embedding de la pregunta}: Convertir la pregunta del usuario a vector
+    \item \textbf{Búsqueda en pgvector}: Encontrar los 50 chunks más similares
+    \item \textbf{Re-ranking con CrossEncoder}: Reordenar por relevancia real $\rightarrow$ Top 5
+    \item \textbf{Generación con LLM}: Enviar contexto + pregunta a Gemini/GPT/Claude
+\end{enumerate}
+
+\newpage
+% ============================================
+\section{Búsqueda Híbrida}
+% ============================================
+
+\begin{conceptbox}[Definición]
+La \textbf{búsqueda híbrida} combina dos métodos de búsqueda complementarios: \textbf{semántica} (por significado) y \textbf{keywords} (por palabras exactas).
+\end{conceptbox}
+
+\subsection{Búsqueda Semántica (Vectorial)}
+
+Busca por \textbf{SIGNIFICADO}, no por palabras exactas.
+
+\begin{lstlisting}[language=SQL, caption=Query con pgvector]
+SELECT content, 
+       1 - (embedding <=> query_vector) AS similarity
+FROM chunks
+ORDER BY embedding <=> query_vector
+LIMIT 50;
+\end{lstlisting}
+
+\textbf{Ejemplo:}
+\begin{itemize}
+    \item Pregunta: ``¿Cómo entrenar un modelo de ML?''
+    \item Encuentra: ``El proceso de aprendizaje automático requiere...''
+    \item $\rightarrow$ Aunque no dice ``entrenar'', el \textbf{significado} es similar
+\end{itemize}
+
+\subsection{Búsqueda por Keywords (BM25)}
+
+Busca por \textbf{PALABRAS EXACTAS}.
+
+\textbf{Ejemplo:}
+\begin{itemize}
+    \item Pregunta: ``¿Cómo entrenar un modelo de ML?''
+    \item Encuentra: ``Para entrenar un modelo de machine learning...''
+    \item $\rightarrow$ Coinciden las palabras ``entrenar'' y ``modelo''
+\end{itemize}
+
+\subsection{¿Por qué combinar ambas?}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Método} & \textbf{Limitación} \\
+\midrule
+Semántica sola & Puede perder términos técnicos específicos \\
+Keywords sola & No entiende sinónimos ni contexto \\
+\textbf{Híbrida} & \textbf{¡Lo mejor de ambos mundos!} $\checkmark$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Diagrama de Búsqueda Híbrida}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.8]
+    % Pregunta
+    \node[draw, rounded corners, fill=primaryblue!20, minimum width=3cm] (q) at (5,5) {PREGUNTA};
+    
+    % Dos ramas de búsqueda
+    \node[draw, rounded corners, fill=secondarygreen!20, minimum width=3cm] (sem) at (2,3) {Búsqueda Semántica};
+    \node[draw, rounded corners, fill=secondarygreen!20, minimum width=3cm] (key) at (8,3) {Búsqueda Keywords};
+    
+    % Fusión
+    \node[draw, rounded corners, fill=accentorange!20, minimum width=3cm] (fusion) at (5,1) {Fusión (RRF)};
+    
+    % Re-ranking
+    \node[draw, rounded corners, fill=accentorange!20, minimum width=3cm] (rerank) at (5,-1) {Re-ranking};
+    
+    % Top 5
+    \node[draw, rounded corners, fill=primaryblue!30, minimum width=3cm] (top) at (5,-3) {TOP 5 Chunks};
+    
+    % Flechas
+    \draw[->, thick] (q) -- (sem);
+    \draw[->, thick] (q) -- (key);
+    \draw[->, thick] (sem) -- (fusion);
+    \draw[->, thick] (key) -- (fusion);
+    \draw[->, thick] (fusion) -- (rerank);
+    \draw[->, thick] (rerank) -- (top);
+    
+    % Etiquetas
+    \node[right] at (2.5,3) {\footnotesize Top 50};
+    \node[left] at (7.5,3) {\footnotesize Top 50};
+\end{tikzpicture}
+\caption{Flujo de búsqueda híbrida con fusión y re-ranking}
+\end{figure}
+
+\newpage
+% ============================================
+\section{Resumen de Conceptos}
+% ============================================
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{2.5cm}p{5cm}p{5cm}}
+\toprule
+\textbf{Concepto} & \textbf{¿Qué es?} & \textbf{¿Para qué sirve?} \\
+\midrule
+\textbf{Chunk} & Fragmento de texto ($\approx$1000 chars) & Dividir documentos grandes \\
+\textbf{Embedding} & Vector de 384 números & Representar significado numéricamente \\
+\textbf{RAG} & Búsqueda + Generación & Responder con TUS documentos \\
+\textbf{Búsqueda Híbrida} & Semántica + Keywords & Encontrar por significado Y palabras \\
+\textbf{Re-ranking} & CrossEncoder & Ordenar por relevancia REAL \\
+\bottomrule
+\end{tabular}
+\caption{Tabla resumen de todos los conceptos}
+\end{table}
+
+\section{Analogía Final: La Biblioteca Inteligente}
+
+Imagina una \textbf{biblioteca con millones de libros}:
+
+\begin{enumerate}
+    \item \textbf{CHUNK} = Cada libro se divide en \textbf{páginas individuales}
+    \item \textbf{EMBEDDING} = Cada página tiene una \textbf{etiqueta invisible} con su ``esencia''
+    \item \textbf{BÚSQUEDA SEMÁNTICA} = Un bibliotecario que entiende \textbf{lo que QUIERES} aunque uses otras palabras
+    \item \textbf{BÚSQUEDA KEYWORDS} = Un índice tradicional que busca \textbf{palabras exactas}
+    \item \textbf{RE-RANKING} = Un experto que revisa los resultados y selecciona \textbf{los más útiles}
+    \item \textbf{RAG} = El bibliotecario te \textbf{resume} la información de las mejores páginas
+\end{enumerate}
+
+\vfill
+\begin{center}
+\textcolor{gray}{\small Documento generado para exposición académica --- Chatbot IA con Copiloto LaTeX v4.2}
+\end{center}
+
+\end{document}

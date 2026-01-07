@@ -21,6 +21,7 @@ import remarkGfm from 'remark-gfm';
 import { TypingIndicator } from './typing-indicator';
 import { CodeBlock } from './code-block';
 import { MermaidDiagram } from './mermaid-diagram';
+import { IllustrativeImage, extractImageSearch } from './illustrative-image';
 import { useState } from 'react';
 import { useToast } from '@/lib/hooks/use-toast';
 
@@ -123,36 +124,50 @@ export function ChatMessages({ messages, messagesEndRef, copiedMessageIndex, han
                 {messages.length - 1 === index && message.role === 'ai' && !message.content ? (
                   <TypingIndicator />
                 ) : (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                    components={{
-                      code: ({ inline, className, children, ...props }: any) => {
-                        const content = String(children).replace(/\n$/, '');
-                        const classNameStr = className || '';
+                  (() => {
+                    // Extract image search marker if present (only for AI messages)
+                    const { cleanContent, searchQuery } = message.role === 'ai'
+                      ? extractImageSearch(message.content)
+                      : { cleanContent: message.content, searchQuery: null };
 
-                        // Check if it's a mermaid diagram (handle 'language-mermaid' or 'hljs language-mermaid')
-                        if (classNameStr.includes('language-mermaid') || classNameStr.includes('mermaid')) {
-                          return <MermaidDiagram chart={content} />;
-                        }
+                    return (
+                      <>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeHighlight]}
+                          components={{
+                            code: ({ inline, className, children, ...props }: any) => {
+                              const content = String(children).replace(/\n$/, '');
+                              const classNameStr = className || '';
 
-                        if (inline) {
-                          return (
-                            <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-sm" {...props}>
-                              {children}
-                            </code>
-                          );
-                        }
-                        return (
-                          <CodeBlock className={className}>
-                            {content}
-                          </CodeBlock>
-                        );
-                      }
-                    }}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
+                              // Check if it's a mermaid diagram (handle 'language-mermaid' or 'hljs language-mermaid')
+                              if (classNameStr.includes('language-mermaid') || classNameStr.includes('mermaid')) {
+                                return <MermaidDiagram chart={content} />;
+                              }
+
+                              if (inline) {
+                                return (
+                                  <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-sm" {...props}>
+                                    {children}
+                                  </code>
+                                );
+                              }
+                              return (
+                                <CodeBlock className={className}>
+                                  {content}
+                                </CodeBlock>
+                              );
+                            }
+                          }}
+                        >
+                          {cleanContent}
+                        </ReactMarkdown>
+
+                        {/* Show illustrative image if AI suggested one */}
+                        {searchQuery && <IllustrativeImage searchQuery={searchQuery} />}
+                      </>
+                    );
+                  })()
                 )}
               </div>
               {message.role === 'ai' && message.source && (

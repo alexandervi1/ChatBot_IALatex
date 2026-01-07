@@ -369,3 +369,54 @@ async def post_feedback(
     db.refresh(db_feedback)
     
     return {"message": "Feedback recibido exitosamente!", "id": db_feedback.id}
+
+
+@router.get(
+    "/search-image",
+    summary="Buscar imagen ilustrativa",
+    description="Busca una imagen relevante en fuentes confiables (Wikipedia, Wikimedia, etc.)",
+    responses={
+        200: {"description": "URL de imagen encontrada"},
+        404: {"description": "No se encontró imagen"}
+    }
+)
+async def search_image_endpoint(
+    query: str,
+    search_engine: SearchEngine = Depends(get_search_engine)
+):
+    """
+    Search for an illustrative image from reliable sources.
+    
+    Args:
+        query: Search term (preferably in English)
+        search_engine: Search engine instance
+        
+    Returns:
+        JSON with image_url and source
+    """
+    try:
+        image_url, source = search_engine._search_image(query)
+        
+        if image_url:
+            return {
+                "success": True,
+                "image_url": image_url,
+                "source": source,
+                "query": query
+            }
+        else:
+            return {
+                "success": False,
+                "image_url": None,
+                "source": None,
+                "query": query
+            }
+    except Exception as e:
+        logger.error(f"Error searching image: {e}")
+        return {
+            "success": False,
+            "image_url": None,
+            "source": None,
+            "query": query
+        }
+

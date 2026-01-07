@@ -339,7 +339,9 @@ Ingresa email y contraseña cuando se te solicite. El usuario se creará con rol
 ### 💬 Chat Inteligente
 - **5 Proveedores de IA**: Gemini, Cerebras, OpenAI, Anthropic, **Ollama (local)**
 - **Slash Commands**: `/resumen`, `/traducir`, `/explicar`, `/tabla`, `/puntos`, `/analizar`
-- **Diagramas Mermaid**: Genera automáticamente diagramas UML, flujos, ER, Gantt
+- **Diagramas Mermaid**: Genera automáticamente diagramas con sintaxis validada y caché inteligente
+- **Imágenes Ilustrativas** ✨: Búsqueda automática de imágenes relevantes (personas, marcas, lugares)
+- **Modal de Vista Completa**: Clic en diagramas e imágenes para ver en pantalla completa
 - **Copy Código**: Botón copiar en bloques de código con feedback visual
 - **Input Mejorado**: Textarea expandible, contador 0/4000, Ctrl+Enter
 - **Botón Regenerar**: Regenera respuestas con un clic
@@ -429,13 +431,21 @@ Ingresa email y contraseña cuando se te solicite. El usuario se creará con rol
 │   │   ├── metrics.py           # Métricas Prometheus
 │   │   ├── rate_limiter.py      # Rate limiting por rol
 │   │   └── 📁 routers/          # Endpoints API
+│   │       ├── auth.py          # Login, registro, JWT
+│   │       ├── chat.py          # Mensajes y RAG
+│   │       ├── documents.py     # Subida de archivos
+│   │       ├── admin.py         # Panel administrador
+│   │       ├── providers.py     # Config proveedores IA
+│   │       ├── collaboration.py # Colaboración tiempo real
+│   │       ├── versions.py      # Control de versiones
+│   │       └── integrations.py  # Integraciones externas
 │   ├── 📁 services/
 │   │   ├── ai_providers.py      # Multi-proveedor IA
 │   │   ├── search_engine.py     # Motor RAG
 │   │   └── embedding_system.py  # Embeddings con caché
 │   ├── 📁 database/
 │   │   └── models.py            # Modelos SQLAlchemy
-│   ├── 📁 tests/                # 60+ tests unitarios
+│   ├── 📁 tests/                # 80+ tests unitarios
 │   └── requirements.txt
 │
 ├── 📁 frontend-react/

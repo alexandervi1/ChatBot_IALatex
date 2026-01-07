@@ -353,12 +353,58 @@ Tu único propósito es sintetizar y analizar información de los documentos pro
 - Usa Tablas Markdown para comparaciones estructuradas.
 - Sé conciso pero completo. Prioriza densidad informativa (150-400 palabras ideal).
 
-=== DIAGRAMAS MERMAID (OPCIONAL) ===
-Genera un diagrama SOLO si clarifica una estructura, proceso o jerarquía compleja:
-- Procesos/Flujos: `graph TD` o `graph LR`
-- Interacciones: `sequenceDiagram`
-- Estructuras: `classDiagram`
-- Estados: `stateDiagram-v2`
+=== DIAGRAMAS MERMAID (OPCIONAL - REGLAS ESTRICTAS) ===
+Genera un diagrama SOLO si clarifica una estructura, proceso o jerarquía compleja.
+
+**SINTAXIS OBLIGATORIA (CRÍTICO - SI NO SIGUES ESTO, EL DIAGRAMA FALLARÁ):**
+1. **IDs simples**: Usa IDs cortos sin espacios: A, B, C1, D2 (NUNCA: "Mi Nodo")
+2. **Labels sin comillas**: A[Texto simple] (NUNCA: A["Texto"] o A[Texto "citado"])
+3. **Sin paréntesis en labels**: A[Texto sin parentesis] (NUNCA: A[Texto (nota)])
+4. **Sin caracteres especiales**: Evita : ; " ' ( ) [ ] en el texto de los nodos
+5. **Una instrucción por línea**: Cada nodo o flecha en su propia línea
+6. **Cerrar todos los corchetes**: Cada [ debe tener su ]
+
+**EJEMPLO CORRECTO:**
+```mermaid
+graph TD
+    A[Inicio del proceso]
+    B[Paso intermedio]
+    C[Resultado final]
+    A --> B
+    B --> C
+```
+
+**EJEMPLO INCORRECTO (NO HACER):**
+```mermaid
+graph TD    A[Paso (1)] --> B["Texto"]
+```
+
+Tipos válidos:
+- Procesos: `graph TD` o `graph LR`
+- Secuencias: `sequenceDiagram`
+- Clases: `classDiagram`
+
+=== IMÁGENES ILUSTRATIVAS (OPCIONAL) ===
+Si la respuesta menciona una persona famosa, marca, logo, lugar icónico, o concepto que se beneficia de un ejemplo visual, incluye al FINAL de tu respuesta (después de todo el texto):
+
+[IMAGE_SEARCH: término de búsqueda en inglés]
+
+**Cuándo incluir imagen:**
+- Personas famosas (científicos, autores, inventores, empresarios)
+- Marcas o logos de empresas
+- Lugares icónicos o monumentos
+- Diagramas científicos o anatómicos
+- Obras de arte o arquitectura
+
+**Cuándo NO incluir imagen:**
+- Conceptos abstractos sin representación visual clara
+- Preguntas sobre procesos o metodologías
+- Temas sensibles o controversiales
+- Si ya incluiste un diagrama Mermaid
+
+**Ejemplo:**
+Si hablas de Albert Einstein, añade al final:
+[IMAGE_SEARCH: Albert Einstein physicist portrait]
 
 RESPUESTA ACADÉMICA:"""
 

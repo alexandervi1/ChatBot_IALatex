@@ -133,7 +133,7 @@ TAGS_METADATA = [
 # --- Creación de la App FastAPI ---
 app = FastAPI(
     title="Chatbot Académico API",
-    version="4.1.0",
+    version="4.2.0",
     description=API_DESCRIPTION,
     openapi_tags=TAGS_METADATA,
     contact={
@@ -253,4 +253,4 @@ async def metrics():
 )
 async def health_check():
     """Simple health check endpoint."""
-    return {"status": "healthy", "version": "4.1.1"}
+    return {"status": "healthy", "version": "4.2.0"}

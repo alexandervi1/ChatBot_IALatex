@@ -1,0 +1,529 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- Paquetes ---
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{fontawesome5}
+
+\usetikzlibrary{shapes.geometric, arrows, positioning, fit, calc}
+
+% --- Configuración de página ---
+\geometry{margin=2.5cm}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Chatbot IA con Copiloto LaTeX v4.2}
+\lhead{Patrones de Arquitectura y Diseño}
+\rfoot{Página \thepage}
+
+% --- Colores ---
+\definecolor{architectural}{RGB}{59, 130, 246}
+\definecolor{creational}{RGB}{34, 197, 94}
+\definecolor{structural}{RGB}{249, 115, 22}
+\definecolor{behavioral}{RGB}{168, 85, 247}
+\definecolor{codebg}{RGB}{245, 245, 245}
+
+% --- Hyperref ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=architectural,
+    urlcolor=architectural
+}
+
+% --- Listings ---
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{gray},
+    language=Python,
+    showstringspaces=false,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red}
+}
+
+% --- Cajas ---
+\newtcolorbox{patternbox}[1][]{
+    colback=architectural!10,
+    colframe=architectural,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{creationalbox}[1][]{
+    colback=creational!10,
+    colframe=creational,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{structuralbox}[1][]{
+    colback=structural!10,
+    colframe=structural,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{behavioralbox}[1][]{
+    colback=behavioral!10,
+    colframe=behavioral,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+% --- Título ---
+\title{
+    \vspace{-2cm}
+    {\Huge \textcolor{architectural}{Patrones de Arquitectura y Diseño}}\\[0.5cm]
+    {\Large Chatbot IA con Copiloto LaTeX v4.2}\\[0.3cm]
+    {\normalsize Análisis de Patrones Implementados en el Proyecto}
+}
+\author{Documentación Técnica para Exposición}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ============================================
+\section{Patrón Arquitectónico Principal}
+% ============================================
+
+\begin{patternbox}[Arquitectura en Capas (Layered Architecture)]
+Es el patrón arquitectónico principal del proyecto. Divide la aplicación en \textbf{capas horizontales}, donde cada capa tiene una responsabilidad específica y solo puede comunicarse con la capa inmediatamente inferior.
+\end{patternbox}
+
+\subsection{Diagrama de Capas}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    layer/.style={draw, rounded corners, minimum width=12cm, minimum height=1.2cm, align=center, font=\small},
+    arrow/.style={->, thick, gray}
+]
+    % Capas
+    \node[layer, fill=architectural!20] (pres) at (0,6) {\textbf{CAPA DE PRESENTACIÓN} --- Frontend (Next.js + React)};
+    \node[layer, fill=creational!20] (api) at (0,4.2) {\textbf{CAPA DE API} --- Routers FastAPI (Endpoints REST)};
+    \node[layer, fill=structural!20] (serv) at (0,2.4) {\textbf{CAPA DE SERVICIOS} --- Lógica de Negocio (search\_engine, ai\_providers)};
+    \node[layer, fill=behavioral!20] (data) at (0,0.6) {\textbf{CAPA DE DATOS} --- PostgreSQL + Redis + SQLAlchemy};
+    
+    % Flechas
+    \draw[arrow] (pres) -- node[right]{\footnotesize HTTP/REST} (api);
+    \draw[arrow] (api) -- node[right]{\footnotesize Depends()} (serv);
+    \draw[arrow] (serv) -- node[right]{\footnotesize ORM/Cache} (data);
+\end{tikzpicture}
+\caption{Arquitectura en capas del proyecto}
+\end{figure}
+
+\subsection{Beneficios}
+\begin{itemize}
+    \item \textbf{Separación de responsabilidades}: Cada capa tiene un propósito claro
+    \item \textbf{Mantenibilidad}: Cambios en una capa no afectan otras
+    \item \textbf{Testabilidad}: Se puede probar cada capa de forma independiente
+    \item \textbf{Escalabilidad}: Fácil de escalar horizontalmente
+\end{itemize}
+
+\newpage
+% ============================================
+\section{Patrones de Diseño Creacionales}
+% ============================================
+
+Los patrones creacionales se enfocan en \textbf{cómo se crean los objetos}.
+
+% --- STRATEGY ---
+\subsection{Strategy Pattern (Patrón Estrategia)}
+
+\begin{creationalbox}[Definición]
+Define una familia de algoritmos, encapsula cada uno y los hace intercambiables. Permite que el algoritmo varíe independientemente de los clientes que lo usan.
+\end{creationalbox}
+
+\textbf{Ubicación:} \texttt{backend/services/ai\_providers.py}
+
+\begin{lstlisting}[caption=Implementación del Strategy Pattern]
+# Interfaz abstracta (Strategy)
+class AIProvider(ABC):
+    @abstractmethod
+    def generate_stream(self, prompt, api_key): pass
+
+# Estrategias concretas
+class GeminiProvider(AIProvider):
+    def generate_stream(self, prompt, api_key):
+        # Implementacion especifica de Gemini
+        
+class OpenAIProvider(AIProvider):
+    def generate_stream(self, prompt, api_key):
+        # Implementacion especifica de OpenAI
+
+# Uso: cambiar proveedor sin cambiar codigo
+provider = get_provider("gemini")  # o "openai"
+response = provider.generate_stream(prompt, key)
+\end{lstlisting}
+
+\textbf{Beneficio:} Permite cambiar el proveedor de IA (Gemini, OpenAI, Claude, Ollama) sin modificar el código que lo utiliza.
+
+% --- SINGLETON ---
+\subsection{Singleton Pattern (Patrón Singleton)}
+
+\begin{creationalbox}[Definición]
+Garantiza que una clase tenga \textbf{una única instancia} y proporciona un punto de acceso global a ella.
+\end{creationalbox}
+
+\textbf{Ubicación:} \texttt{backend/services/embedding\_system.py}
+
+\begin{lstlisting}[caption=Implementación del Singleton Pattern]
+class AdvancedEmbeddingSystem:
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            # Cargar modelo ML (usa ~500MB RAM)
+            cls._instance.model = SentenceTransformer(
+                'all-MiniLM-L6-v2'
+            )
+        return cls._instance
+\end{lstlisting}
+
+\textbf{Beneficio:} Evita cargar el modelo de Machine Learning múltiples veces, ahorrando memoria.
+
+% --- FACTORY ---
+\subsection{Factory Pattern (Patrón Fábrica)}
+
+\begin{creationalbox}[Definición]
+Define una interfaz para crear objetos, pero permite que las subclases decidan qué clase instanciar.
+\end{creationalbox}
+
+\textbf{Ubicación:} \texttt{backend/services/ai\_providers.py}
+
+\begin{lstlisting}[caption=Implementación del Factory Pattern]
+# Registro de proveedores
+PROVIDERS = {
+    "gemini": GeminiProvider(),
+    "openai": OpenAIProvider(),
+    "anthropic": AnthropicProvider(),
+    "cerebras": CerebrasProvider(),
+    "ollama": OllamaProvider(),
+}
+
+# Factory function
+def get_provider(provider_id: str) -> AIProvider:
+    return PROVIDERS.get(provider_id)
+
+# Uso
+provider = get_provider("gemini")
+\end{lstlisting}
+
+\textbf{Beneficio:} Centraliza la creación de proveedores en un solo lugar.
+
+\newpage
+% ============================================
+\section{Patrones de Diseño Estructurales}
+% ============================================
+
+Los patrones estructurales se enfocan en \textbf{cómo se componen los objetos}.
+
+% --- FACADE ---
+\subsection{Facade Pattern (Patrón Fachada)}
+
+\begin{structuralbox}[Definición]
+Proporciona una \textbf{interfaz simplificada} para un subsistema complejo, ocultando su complejidad interna.
+\end{structuralbox}
+
+\textbf{Ubicación:} \texttt{backend/services/search\_engine.py}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    box/.style={draw, rounded corners, minimum width=2.5cm, minimum height=0.8cm, align=center, font=\small},
+    arrow/.style={->, thick}
+]
+    % Cliente
+    \node[box, fill=gray!20] (client) at (0,3) {Cliente};
+    
+    % Facade
+    \node[box, fill=structural!30, minimum width=4cm] (facade) at (0,1.5) {\textbf{SearchEngine}\\\footnotesize (Fachada)};
+    
+    % Subsistemas
+    \node[box, fill=structural!10] (emb) at (-4,0) {Embeddings};
+    \node[box, fill=structural!10] (search) at (-1.5,0) {Búsqueda};
+    \node[box, fill=structural!10] (rerank) at (1.5,0) {Re-ranking};
+    \node[box, fill=structural!10] (llm) at (4,0) {LLM};
+    
+    % Flechas
+    \draw[arrow] (client) -- (facade);
+    \draw[arrow] (facade) -- (emb);
+    \draw[arrow] (facade) -- (search);
+    \draw[arrow] (facade) -- (rerank);
+    \draw[arrow] (facade) -- (llm);
+\end{tikzpicture}
+\caption{SearchEngine como Fachada del sistema RAG}
+\end{figure}
+
+\begin{lstlisting}[caption=Implementación del Facade Pattern]
+class SearchEngine:
+    def generate_answer(self, query, context, api_key):
+        # Oculta la complejidad del pipeline RAG
+        embedding = self.embedding_system.create([query])
+        chunks = self.hybrid_search(db, embedding, query)
+        reranked = self.reranker.score(query, chunks)
+        answer = self.llm.generate(prompt, reranked[:5])
+        return answer
+\end{lstlisting}
+
+% --- DECORATOR ---
+\subsection{Decorator Pattern (Patrón Decorador)}
+
+\begin{structuralbox}[Definición]
+Añade \textbf{responsabilidades adicionales} a un objeto de manera dinámica, sin modificar su estructura.
+\end{structuralbox}
+
+\textbf{Ubicación:} Rate limiting, autenticación, métricas
+
+\begin{lstlisting}[caption=Implementación del Decorator Pattern]
+@router.post("/message")
+@limiter.limit("100/minute")  # Decorador: Rate limiting
+async def send_message(
+    user: User = Depends(get_current_user)  # Decorador: Auth
+):
+    with metrics.timer("response_time"):  # Decorador: Metricas
+        # Logica del endpoint
+        ...
+\end{lstlisting}
+
+\textbf{Beneficio:} Añade funcionalidad (rate limiting, auth, métricas) sin modificar la función original.
+
+\newpage
+% ============================================
+\section{Patrones de Diseño de Comportamiento}
+% ============================================
+
+Los patrones de comportamiento se enfocan en \textbf{cómo interactúan los objetos}.
+
+% --- OBSERVER ---
+\subsection{Observer Pattern (Patrón Observador)}
+
+\begin{behavioralbox}[Definición]
+Define una dependencia \textbf{uno-a-muchos} entre objetos, de modo que cuando uno cambia de estado, todos sus dependientes son notificados automáticamente.
+\end{behavioralbox}
+
+\textbf{Ubicación:} WebSockets + Redis Pub/Sub en \texttt{main.py}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    box/.style={draw, rounded corners, minimum width=2cm, minimum height=0.8cm, align=center, font=\small},
+    arrow/.style={->, thick}
+]
+    % Publisher
+    \node[box, fill=behavioral!30] (redis) at (0,2) {Redis Pub/Sub};
+    
+    % Subscribers
+    \node[box, fill=behavioral!10] (ws1) at (-3,0) {Usuario 1\\(WebSocket)};
+    \node[box, fill=behavioral!10] (ws2) at (0,0) {Usuario 2\\(WebSocket)};
+    \node[box, fill=behavioral!10] (ws3) at (3,0) {Usuario 3\\(WebSocket)};
+    
+    % Flechas
+    \draw[arrow] (redis) -- node[left]{\tiny notify} (ws1);
+    \draw[arrow] (redis) -- node[left]{\tiny notify} (ws2);
+    \draw[arrow] (redis) -- node[right]{\tiny notify} (ws3);
+\end{tikzpicture}
+\caption{Observer Pattern con Redis Pub/Sub}
+\end{figure}
+
+\begin{lstlisting}[caption=Implementación del Observer Pattern]
+async def notification_listener():
+    pubsub = redis_client.pubsub()
+    await pubsub.subscribe("task_notifications")
+    
+    async for message in pubsub.listen():
+        # Notifica a todos los clientes WebSocket
+        await manager.broadcast(message)
+\end{lstlisting}
+
+% --- DEPENDENCY INJECTION ---
+\subsection{Dependency Injection (Inyección de Dependencias)}
+
+\begin{behavioralbox}[Definición]
+Las dependencias de un objeto son \textbf{proporcionadas externamente} en lugar de ser creadas internamente, promoviendo el desacoplamiento.
+\end{behavioralbox}
+
+\textbf{Ubicación:} Todo el backend con FastAPI \texttt{Depends()}
+
+\begin{lstlisting}[caption=Implementación de Dependency Injection]
+# Funciones que proveen dependencias
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    return decode_token(token)
+
+# Inyeccion en el endpoint
+@router.post("/message")
+async def send_message(
+    db: Session = Depends(get_db),           # Inyectado
+    user: User = Depends(get_current_user),  # Inyectado
+):
+    ...
+\end{lstlisting}
+
+\textbf{Beneficio:} Facilita el testing (se pueden inyectar mocks) y desacopla componentes.
+
+\newpage
+% ============================================
+\section{Patrones de Datos}
+% ============================================
+
+% --- REPOSITORY ---
+\subsection{Repository Pattern}
+
+\begin{patternbox}[Definición]
+Abstrae el acceso a datos, proporcionando una \textbf{colección de objetos} similar a una colección en memoria.
+\end{patternbox}
+
+\textbf{Ubicación:} SQLAlchemy Models en \texttt{database/models.py}
+
+\begin{lstlisting}[caption=Implementación del Repository Pattern]
+# Modelo (abstraccion de la tabla)
+class Document(Base):
+    __tablename__ = "documents"
+    id = Column(Integer, primary_key=True)
+    filename = Column(String)
+    embedding = Column(Vector(384))
+
+# Uso: el codigo de negocio no toca SQL
+documents = db.query(Document)\
+              .filter_by(owner_id=user.id)\
+              .all()
+\end{lstlisting}
+
+% --- CACHE-ASIDE ---
+\subsection{Cache-Aside Pattern}
+
+\begin{patternbox}[Definición]
+La aplicación es responsable de \textbf{cargar datos en el caché} bajo demanda. Primero verifica el caché; si no encuentra los datos, los obtiene de la fuente y los almacena.
+\end{patternbox}
+
+\textbf{Ubicación:} \texttt{backend/services/embedding\_system.py}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    box/.style={draw, rounded corners, minimum width=2.5cm, minimum height=0.8cm, align=center, font=\small},
+    decision/.style={draw, diamond, aspect=2, minimum width=2cm, align=center, font=\small},
+    arrow/.style={->, thick}
+]
+    \node[box] (req) at (0,4) {Solicitud};
+    \node[decision] (cache) at (0,2.5) {¿En caché?};
+    \node[box, fill=green!20] (hit) at (-3,1) {Retornar\\(Cache HIT)};
+    \node[box] (calc) at (3,1) {Calcular\\Embedding};
+    \node[box] (save) at (3,-0.5) {Guardar\\en caché};
+    \node[box, fill=green!20] (ret) at (0,-0.5) {Retornar};
+    
+    \draw[arrow] (req) -- (cache);
+    \draw[arrow] (cache) -- node[above]{\footnotesize Sí} (hit);
+    \draw[arrow] (cache) -- node[above]{\footnotesize No} (calc);
+    \draw[arrow] (calc) -- (save);
+    \draw[arrow] (save) -- (ret);
+    \draw[arrow] (hit) |- (ret);
+\end{tikzpicture}
+\caption{Flujo del Cache-Aside Pattern}
+\end{figure}
+
+\newpage
+% ============================================
+\section{Resumen de Patrones}
+% ============================================
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{p{2.5cm}p{3cm}p{4cm}p{4cm}}
+\toprule
+\textbf{Categoría} & \textbf{Patrón} & \textbf{Ubicación} & \textbf{Propósito} \\
+\midrule
+\rowcolor{architectural!10}
+Arquitectónico & Layered & Todo el proyecto & Separar responsabilidades \\
+\midrule
+\rowcolor{creational!10}
+Creacional & Singleton & Embedding System & Una instancia del modelo ML \\
+\rowcolor{creational!10}
+Creacional & Factory & AI Providers & Crear proveedores \\
+\rowcolor{creational!10}
+Creacional & Strategy & AI Providers & Intercambiar algoritmos \\
+\midrule
+\rowcolor{structural!10}
+Estructural & Facade & Search Engine & Simplificar RAG \\
+\rowcolor{structural!10}
+Estructural & Decorator & Rate Limiting & Añadir comportamiento \\
+\midrule
+\rowcolor{behavioral!10}
+Comportamiento & Observer & WebSocket/Redis & Eventos tiempo real \\
+\rowcolor{behavioral!10}
+Comportamiento & Dependency Inj. & FastAPI Depends & Desacoplamiento \\
+\midrule
+Datos & Repository & SQLAlchemy & Abstracción de BD \\
+Datos & Cache-Aside & Embeddings & Optimización \\
+\bottomrule
+\end{tabular}
+\caption{Resumen de todos los patrones implementados}
+\end{table}
+
+\section{Diagrama de Interacción de Patrones}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.85, transform shape,
+    box/.style={draw, rounded corners, minimum width=3cm, minimum height=1cm, align=center}
+]
+    % Frontend
+    \node[box, fill=architectural!20] (front) at (0,5) {Frontend\\(Next.js)};
+    
+    % API Layer
+    \node[box, fill=creational!20] (api) at (0,3) {API Layer\\(Decorator)};
+    
+    % Services
+    \node[box, fill=structural!20] (facade) at (-3,1) {SearchEngine\\(Facade)};
+    \node[box, fill=creational!20] (factory) at (3,1) {AIProviders\\(Factory+Strategy)};
+    
+    % Data
+    \node[box, fill=behavioral!20] (repo) at (-3,-1) {Repository\\(SQLAlchemy)};
+    \node[box, fill=behavioral!20] (cache) at (3,-1) {Cache-Aside\\(Redis)};
+    
+    % Singleton
+    \node[box, fill=creational!10] (single) at (0,-1) {Embeddings\\(Singleton)};
+    
+    % Flechas
+    \draw[->, thick] (front) -- node[right]{\tiny REST} (api);
+    \draw[->, thick] (api) -- node[left]{\tiny DI} (facade);
+    \draw[->, thick] (api) -- node[right]{\tiny DI} (factory);
+    \draw[->, thick] (facade) -- (repo);
+    \draw[->, thick] (facade) -- (single);
+    \draw[->, thick] (single) -- (cache);
+\end{tikzpicture}
+\caption{Interacción entre patrones en el proyecto}
+\end{figure}
+
+\vfill
+\begin{center}
+\textcolor{gray}{\rule{0.8\textwidth}{0.5pt}}\\[0.5cm]
+{\Large \textbf{¡Los patrones hacen el código mantenible!}}\\[0.3cm]
+\textcolor{gray}{Chatbot IA con Copiloto LaTeX v4.2}
+\end{center}
+
+\end{document}

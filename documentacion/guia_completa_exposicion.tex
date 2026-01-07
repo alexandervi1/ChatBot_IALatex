@@ -1,0 +1,601 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- Paquetes ---
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{fontawesome5}
+\usepackage{enumitem}
+
+\usetikzlibrary{shapes.geometric, arrows, positioning, fit}
+
+% --- Configuración de página ---
+\geometry{margin=2.5cm}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Chatbot IA con Copiloto LaTeX v4.2}
+\lhead{Guía Completa para Exposición}
+\rfoot{Página \thepage}
+
+% --- Colores ---
+\definecolor{frontend}{RGB}{59, 130, 246}
+\definecolor{backend}{RGB}{34, 197, 94}
+\definecolor{database}{RGB}{249, 115, 22}
+\definecolor{cache}{RGB}{168, 85, 247}
+\definecolor{ai}{RGB}{236, 72, 153}
+\definecolor{codebg}{RGB}{245, 245, 245}
+
+% --- Hyperref ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=frontend,
+    urlcolor=frontend
+}
+
+% --- Listings ---
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{gray}
+}
+
+% --- Cajas ---
+\newtcolorbox{frontendbox}{
+    colback=frontend!10,
+    colframe=frontend,
+    fonttitle=\bfseries,
+    title={\faReact\ Frontend}
+}
+
+\newtcolorbox{backendbox}{
+    colback=backend!10,
+    colframe=backend,
+    fonttitle=\bfseries,
+    title={\faPython\ Backend}
+}
+
+\newtcolorbox{databasebox}{
+    colback=database!10,
+    colframe=database,
+    fonttitle=\bfseries,
+    title={\faDatabase\ Base de Datos}
+}
+
+\newtcolorbox{aibox}{
+    colback=ai!10,
+    colframe=ai,
+    fonttitle=\bfseries,
+    title={\faRobot\ Inteligencia Artificial}
+}
+
+\newtcolorbox{conceptbox}[1][]{
+    colback=gray!5,
+    colframe=gray!50,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+% --- Título ---
+\title{
+    \vspace{-2cm}
+    {\Huge \textcolor{frontend}{Guía Completa para Exposición}}\\[0.5cm]
+    {\Large Chatbot IA con Copiloto LaTeX}\\[0.3cm]
+    {\normalsize Versión 4.2 --- Explicación Sencilla de Toda la Arquitectura}
+}
+\author{Documentación Técnica}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ============================================
+\section{¿Qué es esta Aplicación?}
+% ============================================
+
+\begin{conceptbox}[Resumen Ejecutivo]
+Es un \textbf{chatbot inteligente} que permite:
+\begin{enumerate}
+    \item \textbf{Subir documentos} (PDF, Word, TXT)
+    \item \textbf{Hacer preguntas} sobre esos documentos
+    \item \textbf{Recibir respuestas} basadas en el contenido real
+    \item \textbf{Escribir documentos LaTeX} con ayuda de IA
+\end{enumerate}
+\end{conceptbox}
+
+\subsection{¿Para quién es?}
+\begin{itemize}
+    \item \faGraduationCap\ \textbf{Estudiantes}: Consultar apuntes y libros con IA
+    \item \faBook\ \textbf{Investigadores}: Analizar papers académicos
+    \item \faEdit\ \textbf{Académicos}: Escribir artículos LaTeX con asistencia
+\end{itemize}
+
+\subsection{Tecnología Principal: RAG}
+
+\textbf{RAG} = Retrieval-Augmented Generation (Generación Aumentada por Recuperación)
+
+\begin{center}
+\fbox{En vez de que la IA \textbf{invente}, primero \textbf{BUSCA} en tus documentos}
+\end{center}
+
+% ============================================
+\section{Arquitectura General}
+% ============================================
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    node distance=1.5cm,
+    box/.style={draw, rounded corners, minimum width=3.5cm, minimum height=1cm, align=center},
+    arrow/.style={->, thick}
+]
+    % Usuario
+    \node[box, fill=gray!20] (user) {\faUser\ Usuario};
+    
+    % Frontend
+    \node[box, fill=frontend!20, below=of user] (front) {\faReact\ Frontend\\(Next.js)};
+    
+    % Backend
+    \node[box, fill=backend!20, below=of front] (back) {\faPython\ Backend\\(FastAPI)};
+    
+    % Servicios
+    \node[box, fill=database!20, below left=1.5cm and 0.5cm of back] (db) {\faDatabase\ PostgreSQL\\+ pgvector};
+    \node[box, fill=purple!20, below=of back] (redis) {\faMemory\ Redis\\(Cache)};
+    \node[box, fill=ai!20, below right=1.5cm and 0.5cm of back] (ai) {\faRobot\ IA\\(Gemini/GPT)};
+    
+    % Flechas
+    \draw[arrow] (user) -- node[right]{\footnotesize HTTP} (front);
+    \draw[arrow] (front) -- node[right]{\footnotesize API REST} (back);
+    \draw[arrow] (back) -- (db);
+    \draw[arrow] (back) -- (redis);
+    \draw[arrow] (back) -- (ai);
+\end{tikzpicture}
+\caption{Arquitectura general de la aplicación}
+\end{figure}
+
+\subsection{Los 5 Servicios (Docker)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Servicio} & \textbf{Puerto} & \textbf{Tecnología} & \textbf{Función} \\
+\midrule
+Frontend & 3000 & Next.js 15 & Interfaz de usuario \\
+Backend & 8000 & FastAPI & API y lógica \\
+Base de Datos & 5432 & PostgreSQL & Almacenamiento \\
+Cache & 6379 & Redis & Velocidad \\
+Worker & -- & Celery & Tareas pesadas \\
+\bottomrule
+\end{tabular}
+\caption{Servicios de la aplicación}
+\end{table}
+
+\newpage
+% ============================================
+\section{Frontend (Lo que ve el usuario)}
+% ============================================
+
+\begin{frontendbox}
+El frontend es la \textbf{interfaz gráfica} que el usuario ve en su navegador.
+\end{frontendbox}
+
+\subsection{Tecnologías Usadas}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lp{8cm}}
+\toprule
+\textbf{Tecnología} & \textbf{¿Qué hace?} \\
+\midrule
+\textbf{Next.js 15} & Framework de React para páginas web rápidas \\
+\textbf{React 19} & Librería para crear interfaces interactivas \\
+\textbf{TypeScript} & JavaScript con tipos (menos errores) \\
+\textbf{Tailwind CSS} & Estilos CSS rápidos de escribir \\
+\textbf{Radix UI} & Componentes accesibles (botones, menús, etc.) \\
+\textbf{CodeMirror} & Editor de código para LaTeX \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Páginas Principales}
+
+\begin{enumerate}
+    \item \textbf{/} --- Página de inicio y login
+    \item \textbf{/chat} --- Chat con documentos
+    \item \textbf{/copilot} --- Editor LaTeX con IA
+    \item \textbf{/admin} --- Panel de administración
+\end{enumerate}
+
+\subsection{¿Cómo se comunica con el Backend?}
+
+\begin{lstlisting}[language=JavaScript, caption=Ejemplo de llamada al API]
+// Enviar mensaje al chat
+const response = await fetch('http://localhost:8000/chat/message', {
+    method: 'POST',
+    headers: {
+        'Authorization': 'Bearer <token>',
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ message: "Que es IA?" })
+});
+\end{lstlisting}
+
+\subsection{Componentes Importantes}
+
+\begin{itemize}
+    \item \texttt{chat/} --- Interfaz del chat (mensajes, input, fuentes)
+    \item \texttt{copilot/} --- Editor LaTeX (33 archivos)
+    \item \texttt{admin/} --- Panel de administración
+    \item \texttt{ui/} --- Componentes reutilizables (botones, dialogs)
+\end{itemize}
+
+\newpage
+% ============================================
+\section{Backend (La lógica del servidor)}
+% ============================================
+
+\begin{backendbox}
+El backend es el \textbf{cerebro} de la aplicación. Procesa las peticiones, busca en la base de datos y genera respuestas.
+\end{backendbox}
+
+\subsection{Tecnologías Usadas}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lp{8cm}}
+\toprule
+\textbf{Tecnología} & \textbf{¿Qué hace?} \\
+\midrule
+\textbf{FastAPI} & Framework web ultrarrápido para Python \\
+\textbf{Python 3.11} & Lenguaje de programación principal \\
+\textbf{SQLAlchemy} & ORM para comunicarse con la base de datos \\
+\textbf{Pydantic} & Validación automática de datos \\
+\textbf{Celery} & Ejecutar tareas pesadas en segundo plano \\
+\textbf{JWT} & Tokens de autenticación seguros \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Routers (Endpoints del API)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{llp{6cm}}
+\toprule
+\textbf{Router} & \textbf{Ruta} & \textbf{Función} \\
+\midrule
+\texttt{auth} & /auth/* & Login, registro, JWT \\
+\texttt{chat} & /chat/* & Enviar mensajes, RAG \\
+\texttt{documents} & /documents/* & Subir/eliminar archivos \\
+\texttt{providers} & /providers/* & Configurar proveedor IA \\
+\texttt{admin} & /admin/* & Gestión de usuarios \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Servicios (La lógica de negocio)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lp{7cm}}
+\toprule
+\textbf{Servicio} & \textbf{¿Qué hace?} \\
+\midrule
+\texttt{search\_engine.py} & Búsqueda híbrida + generación de respuestas \\
+\texttt{ai\_providers.py} & Conectar con Gemini, GPT, Claude, Ollama \\
+\texttt{embedding\_system.py} & Convertir texto a vectores \\
+\texttt{auth\_service.py} & Login, tokens, seguridad \\
+\texttt{pdf\_processor.py} & Extraer texto de PDFs \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{¿Cómo funciona una petición?}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=2cm, auto]
+    \node[draw, rounded corners, fill=frontend!20] (1) {1. Usuario envía mensaje};
+    \node[draw, rounded corners, fill=backend!20, right=of 1] (2) {2. FastAPI recibe};
+    \node[draw, rounded corners, fill=database!20, right=of 2] (3) {3. Busca en BD};
+    \node[draw, rounded corners, fill=ai!20, below=of 3] (4) {4. Envía a IA};
+    \node[draw, rounded corners, fill=frontend!20, left=of 4] (5) {5. Devuelve respuesta};
+    
+    \draw[->, thick] (1) -- (2);
+    \draw[->, thick] (2) -- (3);
+    \draw[->, thick] (3) -- (4);
+    \draw[->, thick] (4) -- (5);
+\end{tikzpicture}
+\caption{Flujo de una petición}
+\end{figure}
+
+\newpage
+% ============================================
+\section{Base de Datos (Dónde se guarda todo)}
+% ============================================
+
+\begin{databasebox}
+PostgreSQL es la base de datos relacional. La extensión \textbf{pgvector} permite guardar y buscar \textbf{vectores} (embeddings).
+\end{databasebox}
+
+\subsection{Tablas Principales}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lp{8cm}}
+\toprule
+\textbf{Tabla} & \textbf{¿Qué guarda?} \\
+\midrule
+\textbf{users} & Usuarios (email, contraseña hasheada, rol) \\
+\textbf{documents} & Documentos subidos (nombre, dueño, fecha) \\
+\textbf{chunks} & Fragmentos de texto + \textbf{embedding} (vector 384) \\
+\textbf{chats} & Conversaciones de cada usuario \\
+\textbf{messages} & Mensajes individuales del chat \\
+\textbf{audit\_logs} & Registro de acciones de seguridad \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{¿Qué es pgvector?}
+
+Es una \textbf{extensión de PostgreSQL} que permite:
+
+\begin{itemize}
+    \item Guardar vectores de números (embeddings)
+    \item Buscar vectores similares (similitud coseno)
+    \item Crear índices para búsquedas rápidas
+\end{itemize}
+
+\begin{lstlisting}[language=SQL, caption=Búsqueda vectorial con pgvector]
+-- Buscar los 5 chunks mas similares a mi pregunta
+SELECT content, 
+       1 - (embedding <=> query_vector) AS similitud
+FROM chunks
+ORDER BY embedding <=> query_vector
+LIMIT 5;
+\end{lstlisting}
+
+El operador \texttt{<=>} calcula la \textbf{distancia coseno} entre vectores.
+
+\subsection{Redis (Cache)}
+
+\begin{itemize}
+    \item Guarda embeddings ya calculados (no recalcular)
+    \item Rate limiting (límite de peticiones por minuto)
+    \item TTL de 7 días para embeddings
+\end{itemize}
+
+\newpage
+% ============================================
+\section{Inteligencia Artificial}
+% ============================================
+
+\begin{aibox}
+La IA es el componente que \textbf{entiende} las preguntas y \textbf{genera} las respuestas usando el contexto encontrado.
+\end{aibox}
+
+\subsection{Proveedores de IA Soportados}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Proveedor} & \textbf{Modelos} & \textbf{API Key} & \textbf{Costo} \\
+\midrule
+Google Gemini & gemini-2.5-flash/pro & Sí & Gratis con límites \\
+OpenAI & gpt-4o, gpt-4o-mini & Sí & Pago por uso \\
+Anthropic & claude-3.5-sonnet & Sí & Pago por uso \\
+Cerebras & llama-3.3-70b & Sí & Gratis con límites \\
+\textbf{Ollama} & qwen2.5:3b, llama3.2 & \textbf{No} & \textbf{100\% Gratis} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Sentence Transformers (Embeddings)}
+
+\begin{itemize}
+    \item Modelo: \texttt{all-MiniLM-L6-v2}
+    \item Función: Convertir texto $\rightarrow$ vector de 384 números
+    \item Uso: Búsqueda semántica (por significado)
+\end{itemize}
+
+\subsection{CrossEncoder (Re-ranking)}
+
+\begin{itemize}
+    \item Modelo: \texttt{cross-encoder/ms-marco-MiniLM-L-6-v2}
+    \item Función: Reordenar resultados por relevancia REAL
+    \item Uso: De Top-50 candidatos $\rightarrow$ Top-5 mejores
+\end{itemize}
+
+\subsection{Pipeline RAG Completo}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=1.8cm, auto, 
+    box/.style={draw, rounded corners, minimum width=2.5cm, minimum height=0.8cm, align=center, font=\small}]
+    
+    \node[box, fill=gray!20] (q) {Pregunta};
+    \node[box, fill=ai!20, right=of q] (emb) {Embedding};
+    \node[box, fill=database!20, right=of emb] (search) {Búsqueda\\Híbrida};
+    \node[box, fill=purple!20, right=of search] (rerank) {Re-ranking};
+    \node[box, fill=ai!20, below=1cm of rerank] (llm) {LLM\\(Gemini)};
+    \node[box, fill=backend!20, left=of llm] (resp) {Respuesta};
+    
+    \draw[->, thick] (q) -- (emb);
+    \draw[->, thick] (emb) -- (search);
+    \draw[->, thick] (search) -- node[above]{\tiny Top 50} (rerank);
+    \draw[->, thick] (rerank) -- node[right]{\tiny Top 5} (llm);
+    \draw[->, thick] (llm) -- (resp);
+\end{tikzpicture}
+\caption{Pipeline RAG de la aplicación}
+\end{figure}
+
+\newpage
+% ============================================
+\section{Seguridad}
+% ============================================
+
+\subsection{Autenticación (JWT)}
+
+\begin{itemize}
+    \item \textbf{Access Token}: Expira en 30 minutos
+    \item \textbf{Refresh Token}: Expira en 7 días, se rota en cada uso
+    \item \textbf{Algoritmo}: HS256 (HMAC con SHA-256)
+\end{itemize}
+
+\begin{lstlisting}[caption=Estructura de un JWT]
+Header: {"alg": "HS256", "typ": "JWT"}
+Payload: {"sub": "user_id", "exp": 1234567890}
+Signature: HMACSHA256(header + payload, SECRET_KEY)
+\end{lstlisting}
+
+\subsection{Encriptación}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Dato} & \textbf{Método} & \textbf{Reversible} \\
+\midrule
+Contraseñas & BCrypt (hash) & No \\
+API Keys & Fernet (AES-128) & Sí \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Rate Limiting}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Rol} & \textbf{Límite} \\
+\midrule
+Anónimo & 30 peticiones/minuto \\
+Usuario & 100 peticiones/minuto \\
+Admin & 1000 peticiones/minuto \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================
+\section{Docker y Despliegue}
+% ============================================
+
+\subsection{¿Qué es Docker?}
+
+Docker es una herramienta que \textbf{empaqueta} toda la aplicación (código + dependencias) en \textbf{contenedores} que funcionan igual en cualquier computadora.
+
+\subsection{docker-compose.yml}
+
+Orquesta \textbf{5 contenedores} que trabajan juntos:
+
+\begin{lstlisting}[caption=Servicios en docker-compose.yml]
+services:
+  frontend:   # Next.js en puerto 3000
+  backend:    # FastAPI en puerto 8000
+  db:         # PostgreSQL en puerto 5432
+  cache:      # Redis en puerto 6379
+  celery:     # Worker para tareas async
+\end{lstlisting}
+
+\subsection{Comando para Levantar Todo}
+
+\begin{lstlisting}[language=bash]
+# Construir e iniciar todos los servicios
+docker-compose up --build -d
+
+# Ver logs
+docker-compose logs -f
+
+# Parar todo
+docker-compose down
+\end{lstlisting}
+
+\newpage
+% ============================================
+\section{Resumen: Preguntas de Exposición}
+% ============================================
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{5cm}p{8cm}}
+\toprule
+\textbf{Pregunta} & \textbf{Respuesta Corta} \\
+\midrule
+¿Qué tecnología usa el Frontend? & Next.js 15 con React 19 y TypeScript \\
+\midrule
+¿Qué tecnología usa el Backend? & FastAPI con Python 3.11 \\
+\midrule
+¿Qué base de datos usa? & PostgreSQL 16 con extensión pgvector \\
+\midrule
+¿Qué es RAG? & Buscar en documentos antes de generar respuesta \\
+\midrule
+¿Qué es un embedding? & Representación numérica del significado del texto \\
+\midrule
+¿Qué es un chunk? & Fragmento de ~1000 caracteres de un documento \\
+\midrule
+¿Cómo se autentican los usuarios? & JWT (Access + Refresh Token) \\
+\midrule
+¿Cómo se guardan las contraseñas? & Hash con BCrypt (irreversible) \\
+\midrule
+¿Para qué sirve Redis? & Cache de embeddings y rate limiting \\
+\midrule
+¿Para qué sirve Celery? & Procesar tareas pesadas en segundo plano \\
+\midrule
+¿Qué proveedores de IA soporta? & Gemini, OpenAI, Claude, Cerebras, Ollama \\
+\midrule
+¿Puede funcionar offline? & Sí, con Ollama (modelos locales) \\
+\bottomrule
+\end{tabular}
+\caption{Preguntas frecuentes para la exposición}
+\end{table}
+
+\section{Diagrama Final de Arquitectura}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.9, transform shape,
+    layer/.style={draw, rounded corners, minimum width=12cm, minimum height=1.5cm, align=center}]
+    
+    % Capas
+    \node[layer, fill=frontend!20] (ui) at (0,6) {\textbf{FRONTEND} --- Next.js 15 + React 19 + TypeScript + Tailwind};
+    
+    \node[layer, fill=backend!20] (api) at (0,4) {\textbf{BACKEND} --- FastAPI + Python 3.11 + SQLAlchemy + JWT};
+    
+    \node[layer, fill=ai!20] (ai) at (0,2) {\textbf{IA} --- Sentence Transformers + CrossEncoder + LLMs (Gemini/GPT)};
+    
+    \node[layer, fill=database!20] (data) at (0,0) {\textbf{DATOS} --- PostgreSQL + pgvector + Redis + Celery};
+    
+    % Flechas
+    \draw[->, thick] (ui) -- (api);
+    \draw[->, thick] (api) -- (ai);
+    \draw[->, thick] (api) -- (data);
+    \draw[->, thick] (ai) -- (data);
+    
+\end{tikzpicture}
+\caption{Arquitectura en capas de la aplicación}
+\end{figure}
+
+\vfill
+\begin{center}
+\textcolor{gray}{\rule{0.8\textwidth}{0.5pt}}\\[0.5cm]
+{\Large \textbf{¡Buena suerte en tu exposición!}}\\[0.3cm]
+\textcolor{gray}{Chatbot IA con Copiloto LaTeX v4.2}
+\end{center}
+
+\end{document}
