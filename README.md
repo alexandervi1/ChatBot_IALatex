@@ -379,7 +379,6 @@ Ingresa email y contraseña cuando se te solicite. El usuario se creará con rol
 - **Drag & Drop**: Arrastra archivos para subirlos
 - **Responsive**: Funciona en desktop y tablet
 - **Dark Mode por Defecto**: Con ThemeProvider profesional
-- **Accesibilidad WCAG 2.1**: Skip links, focus trap, alto contraste
 
 ---
 
